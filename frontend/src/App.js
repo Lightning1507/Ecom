@@ -9,6 +9,7 @@ import Register from './components/auth/Register';
 import ProductManagement from './components/seller/ProductManagement';
 import AddProduct from './components/products/AddProduct';
 import EditProduct from './components/products/EditProduct';
+import ProductsList from './components/products/ProductsList';
 import './App.css';
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
                   <div>Profile Page (Protected)</div>
                 </ProtectedRoute>
               } />
+              <Route path="/products" element={<ProductsList />} />
               <Route path="/admin" element={
                 <ProtectedRoute roles={['admin']}>
                   <div>Admin Dashboard (Protected, Admin Only)</div>

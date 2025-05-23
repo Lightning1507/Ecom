@@ -1,4 +1,6 @@
-const pool = require('../config/db');
+const {Pool} = require('pg');
+const pool = require('../db');
+
 
 // Create a new product
 exports.createProduct = async (req, res) => {
@@ -57,16 +59,14 @@ exports.createProduct = async (req, res) => {
 // Get all products
 exports.getAllProducts = async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT p.*, u.username as seller_name FROM Products p JOIN Sellers s ON p.seller_id = s.seller_id JOIN Users u ON s.seller_id = u.user_id WHERE p.visible = true ORDER BY p.product_id DESC'
-    );
-    
+    const result = await pool.query('SELECT * FROM products');
     res.json({ products: result.rows });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Get seller's products
 exports.getSellerProducts = async (req, res) => {
