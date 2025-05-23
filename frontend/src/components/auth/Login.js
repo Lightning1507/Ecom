@@ -13,18 +13,42 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
+    // Validation
+    if (!trimmedUsername || !trimmedPassword) {
+      setError('Please enter both username and password');
+      return;
+    }
+
     setLoading(true);
     setError('');
-    
+
     try {
-      const result = await login(username, password);
+      console.log('Attempting login with username:', trimmedUsername);
+      console.log('Input validation passed');
+      const result = await login(trimmedUsername, trimmedPassword);
+
+      console.log('Server response:', result);
+
       if (result.success) {
+        console.log('Login successful, redirecting...');
         navigate('/');
       } else {
-        setError(result.message);
+        console.error('Login failed:', result.message);
+        console.error('Status code:', result.status);
+        setError(result.message || 'Invalid username or password');
       }
     } catch (err) {
-      setError('An error occurred during login. Please try again.');
+      console.error('Login error:', err);
+      console.error('Error details:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      });
+      setError('Connection error. Please check your internet connection or try again later.');
     } finally {
       setLoading(false);
     }
