@@ -1,5 +1,4 @@
 import React from 'react';
-// In App.js
 import { Router, Routes, Route } from './router';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/routes/ProtectedRoute';
@@ -7,9 +6,9 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
-// Import the new components
 import ProductManagement from './components/seller/ProductManagement';
 import AddProduct from './components/products/AddProduct';
+import EditProduct from './components/products/EditProduct';
 import './App.css';
 
 function App() {
@@ -19,6 +18,7 @@ function App() {
         <div className="App">
           <Header />
           <main className="main-content">
+            {/* RouteDebug component removed */}
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -53,13 +53,18 @@ function App() {
                   <AddProduct />
                 </ProtectedRoute>
               } />
-              {/* We also need to create an EditProduct component */}
-              {/* <Route path="/seller/edit-product/:id" element={
+              <Route path="/seller/edit-product/:id" element={
                 <ProtectedRoute roles={['seller']}>
                   <EditProduct />
                 </ProtectedRoute>
-              } /> */}
-              <Route path="*" element={<div>Page Not Found</div>} />
+              } />
+              <Route path="*" element={
+                <div>
+                  <h2>Page Not Found</h2>
+                  <p>The page you're looking for doesn't exist or you don't have permission to view it.</p>
+                  <p>Current URL: {window.location.pathname}</p>
+                </div>
+              } />
             </Routes>
           </main>
           <Footer />

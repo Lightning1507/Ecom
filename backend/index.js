@@ -1,156 +1,102 @@
 const express = require('express');
 const cors = require('cors');
-const pool = require('./db');
-require('dotenv').config();
+const path = require('path');
+const pool = require('./db'); // Import your database connection
+const bcrypt = require('bcryptjs');
 
+// Load environment variables
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+// Create Express app
 const app = express();
-const port = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// Configure middleware
 app.use(express.json());
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
 
 // Test route
-app.get('/', (req, res) => {
-  res.json({ message: 'E-commerce API is running' });
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Backend API is working!' });
 });
 
-// Products routes
-app.get('/api/products', async (req, res) => {
+// Database test route
+app.get('/api/db-test', async (req, res) => {
   try {
-    const products = await pool.query('SELECT * FROM products');
-    res.json(products.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-app.get('/api/products/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
-    
-    if (product.rows.length === 0) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    
-    res.json(product.rows[0]);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Server start
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-// User routes
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-// Register a new user
-app.post('/api/users/register', async (req, res) => {
-  try {
-    const { username, password, full_name, email, phone, address, role } = req.body;
-
-    // Check if username or email already exists
-    const userExists = await pool.query(
-        'SELECT * FROM Users WHERE username = $1 OR email = $2',
-        [username, email]
-    );
-
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ message: 'Username or email already exists' });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Insert user
-    const newUser = await pool.query(
-        'INSERT INTO Users (username, password, full_name, email, phone, address, role) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-        [username, hashedPassword, full_name, email, phone, address, role || 'customer']
-    );
-
-    // Create cart for user
-    await pool.query(
-        'INSERT INTO Carts (user_id) VALUES ($1)',
-        [newUser.rows[0].user_id]
-    );
-
-    // If role is seller, create seller profile
-    if (role === 'seller') {
-      await pool.query(
-          'INSERT INTO Sellers (seller_id, store_name, description) VALUES ($1, $2, $3)',
-          [newUser.rows[0].user_id, `${username}'s Store`, 'New seller store']
-      );
-    }
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      user: {
-        user_id: newUser.rows[0].user_id,
-        username: newUser.rows[0].username,
-        email: newUser.rows[0].email,
-        role: newUser.rows[0].role
-      }
+    const result = await pool.query('SELECT NOW()');
+    res.json({ 
+      message: 'Database connection successful!',
+      time: result.rows[0].now
     });
-
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ message: 'Server error' });
+  } catch (error) {
+    console.error('Database query error:', error);
+    res.status(500).json({ 
+      message: 'Database connection failed',
+      error: error.message
+    });
   }
 });
 
-// Login user
+// Login route
 app.post('/api/users/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-
+    
+    console.log('Login attempt:', { username, password: '****' });
+    
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Please provide username and password' });
+    }
+    
+    // Query database for user
+    const result = await pool.query(
+      'SELECT * FROM users WHERE username = $1',
+      [username]
+    );
+    
     // Check if user exists
-    const user = await pool.query(
-        'SELECT * FROM Users WHERE username = $1',
-        [username]
-    );
-
-    if (user.rows.length === 0) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
+    
+    const user = result.rows[0];
 
-    // Check if account is locked
-    if (user.rows[0].locked) {
-      return res.status(400).json({ message: 'Account is locked. Please contact support.' });
+    // Use bcrypt to compare the entered password to the stored hash
+    const passwordMatch = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
-
-    // Verify password
-    const validPassword = await bcrypt.compare(password, user.rows[0].password);
-
-    if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Create JWT token
-    const token = jwt.sign(
-        { id: user.rows[0].user_id, role: user.rows[0].role },
-        process.env.JWT_SECRET || 'yourSecretKey',
-        { expiresIn: '1d' }
-    );
-
+    
+    // Success - send user data
     res.json({
-      token,
-      user_id: user.rows[0].user_id,
-      username: user.rows[0].username,
-      email: user.rows[0].email,
-      full_name: user.rows[0].full_name,
-      role: user.rows[0].role
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      },
+      token: 'dummy-token-for-now'
     });
-
-  } catch (err) {
-    console.error(err.message);
+    
+  } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.send('Backend server is running!');
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Test the API at http://localhost:${PORT}/api/test`);
+  console.log(`Test the database at http://localhost:${PORT}/api/db-test`);
 });

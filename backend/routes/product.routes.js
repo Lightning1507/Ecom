@@ -42,4 +42,21 @@ router.get('/seller/my-products', auth, sellerAuth, productController.getSellerP
 router.put('/:id', auth, sellerAuth, upload.single('image'), productController.updateProduct);
 router.delete('/:id', auth, sellerAuth, productController.deleteProduct);
 
+// Add this to your product.routes.js file
+// Debug route - no authentication required
+router.get('/debug', (req, res) => {
+  res.json({ 
+    message: 'Product routes are working',
+    endpoints: [
+      'GET /api/products',
+      'GET /api/products/:id',
+      'GET /api/products/categories/all',
+      'POST /api/products',
+      'GET /api/products/seller/my-products',
+      'PUT /api/products/:id',
+      'DELETE /api/products/:id'
+    ]
+  });
+});
+
 module.exports = router;

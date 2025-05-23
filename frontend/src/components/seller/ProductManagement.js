@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import '../products/ProductStyles.css'; // Make sure to import the CSS
 
 const ProductManagement = () => {
   const [products, setProducts] = useState([]);
@@ -13,20 +14,35 @@ const ProductManagement = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        console.log('Fetching products with token:', user?.token);
+        
+        if (!user || !user.token) {
+          console.error('No authentication token available');
+          setError('Please log in to view your products');
+          setLoading(false);
+          return;
+        }
+        
         const response = await fetch('/api/products/seller/my-products', {
           headers: {
             'Authorization': `Bearer ${user.token}`
           }
         });
         
+        console.log('API Response status:', response.status);
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch products');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API error:', errorData);
+          throw new Error(errorData.message || `Failed to fetch products: ${response.status}`);
         }
         
         const data = await response.json();
-        setProducts(data.products);
+        console.log('Products received:', data);
+        setProducts(data.products || []);
       } catch (err) {
-        setError(err.message);
+        console.error('Error fetching products:', err);
+        setError(err.message || 'Failed to load products');
       } finally {
         setLoading(false);
       }
@@ -60,8 +76,22 @@ const ProductManagement = () => {
     }
   };
   
+  // Render a debug section to help troubleshoot
+  const renderDebugInfo = () => {
+    return (
+      <div style={{margin: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px'}}>
+        <h3>Debug Information</h3>
+        <p>Loading state: {loading ? 'Loading...' : 'Completed'}</p>
+        <p>Error state: {error ? error : 'No errors'}</p>
+        <p>User authenticated: {user ? 'Yes' : 'No'}</p>
+        <p>Products count: {products ? products.length : 0}</p>
+        <p>User role: {user ? user.role : 'Unknown'}</p>
+      </div>
+    );
+  };
+  
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="loading">Loading products...</div>;
   }
   
   return (
@@ -72,6 +102,8 @@ const ProductManagement = () => {
           Add New Product
         </Link>
       </div>
+      
+      {renderDebugInfo()} {/* Add this for debugging */}
       
       {error && <div className="error-message">{error}</div>}
       
