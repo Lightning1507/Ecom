@@ -41,7 +41,7 @@ const EditProduct = () => {
         const productData = await productResponse.json();
         
         // Fetch categories
-        const categoriesResponse = await fetch('/api/products/categories/all');
+        const categoriesResponse = await fetch('/api/categories');
         const categoriesData = await categoriesResponse.json();
         
         setCategories(categoriesData.categories);
@@ -125,8 +125,8 @@ const EditProduct = () => {
     }
     
     try {
-      const response = await fetch(`/api/products/${id}`, {
-        method: 'PUT',
+      const response = await fetch(`/api/products/${id}`, { // Use the correct URL with ID
+        method: 'PUT', // Use PUT for updates
         headers: {
           'Authorization': `Bearer ${user.token}`
         },

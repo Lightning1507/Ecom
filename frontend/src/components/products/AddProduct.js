@@ -25,7 +25,7 @@ const AddProduct = () => {
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/products/categories/all');
+        const response = await fetch('/api/categories');
         const data = await response.json();
         setCategories(data.categories);
       } catch (err) {
@@ -90,6 +90,7 @@ const AddProduct = () => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${user.token}`
+          // Don't include Content-Type header when using FormData
         },
         body: formDataToSend
       });

@@ -50,13 +50,16 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      // In your login function in AuthContext.js
       if (data.token) {
-        localStorage.setItem('token', data.token);
+        const userData = data.user || data;
+        userData.token = data.token; // Add token to user object
+        localStorage.setItem('user', JSON.stringify(userData));
+        setUser(userData);
+      } else {
+        localStorage.setItem('user', JSON.stringify(data.user || data));
+        setUser(data.user || data);
       }
-
-      // Store user in local storage
-      localStorage.setItem('user', JSON.stringify(data.user || data));
-      setUser(data.user || data);
       return {success: true};
     } catch (error) {
       console.error('Login error:', error);
