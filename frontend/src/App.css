@@ -97,7 +97,7 @@ body {
   Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
+  background-color: #f8fafc;
   color: #333;
 }
 
@@ -105,14 +105,65 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background-color: #f8fafc;
 }
 
+/* Header */
+header {
+  height: 60px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+}
+
+/* Main Content */
 .main-content {
   flex: 1;
+  margin-top: 60px; /* Header height */
+  padding-bottom: 2rem;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 60px); /* Full viewport height minus header */
+}
+
+.container {
   max-width: 1300px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 2rem 20px;
   width: 100%;
+  min-height: calc(100vh - 60px - 4rem); /* Viewport height minus header and padding */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  header {
+    padding: 0 1rem;
+  }
+
+  .main-content {
+    margin-top: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  header {
+    height: 50px;
+  }
+
+  .main-content {
+    margin-top: 50px;
+    min-height: calc(100vh - 50px);
+  }
+
+  .container {
+    min-height: calc(100vh - 50px - 4rem);
+  }
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -130,22 +181,4 @@ a:hover {
 
 button {
   cursor: pointer;
-}
-
-/* Grid and layout utilities */
-.container {
-  max-width: 1300px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0 -15px;
-}
-
-.col {
-  padding: 0 15px;
-  flex: 1;
 }
