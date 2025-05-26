@@ -5,7 +5,26 @@ const pool = require('../db');
 // Create a new product
 exports.createProduct = async (req, res) => {
   try {
-    const { name, description, price, stock, categories } = req.body;
+    console.log('Request body:', req.body);
+    console.log('Uploaded file:', req.file);
+    
+    const { name, description, price, stock } = req.body;
+    let categories = req.body.categories;
+    
+    // Parse categories if it's an array in string format
+    if (typeof categories === 'string' && categories.startsWith('[')) {
+      try {
+        categories = JSON.parse(categories);
+      } catch (e) {
+        console.error('Failed to parse categories:', e);
+      }
+    } else if (req.body['categories[]']) {
+      // Handle categories[] format
+      categories = Array.isArray(req.body['categories[]']) 
+        ? req.body['categories[]'] 
+        : [req.body['categories[]']];
+    }
+    
     const sellerId = req.user.id; // From auth middleware
     
     // Start a transaction
@@ -13,10 +32,13 @@ exports.createProduct = async (req, res) => {
     try {
       await client.query('BEGIN');
       
+      // Get file path from multer
+      const imgPath = req.file ? req.file.filename : null;
+      
       // Insert the product
       const productResult = await client.query(
         'INSERT INTO Products (seller_id, name, description, img_path, price, stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING product_id',
-        [sellerId, name, description, req.file ? req.file.path : null, price, stock]
+        [sellerId, name, description, imgPath, price, stock]
       );
       
       const productId = productResult.rows[0].product_id;
@@ -41,7 +63,8 @@ exports.createProduct = async (req, res) => {
           name,
           description,
           price,
-          stock
+          stock,
+          img_path: imgPath
         }
       });
     } catch (err) {
@@ -51,7 +74,7 @@ exports.createProduct = async (req, res) => {
       client.release();
     }
   } catch (err) {
-    console.error(err.message);
+    console.error('Create product error:', err.message);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -117,11 +140,26 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-// Update product
+// Update your updateProduct function as well
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock, visible, categories } = req.body;
+    const { name, description, price, stock, visible } = req.body;
+    let categories = req.body.categories;
+    
+    // Parse categories if needed
+    if (typeof categories === 'string' && categories.startsWith('[')) {
+      try {
+        categories = JSON.parse(categories);
+      } catch (e) {
+        console.error('Failed to parse categories:', e);
+      }
+    } else if (req.body['categories[]']) {
+      categories = Array.isArray(req.body['categories[]']) 
+        ? req.body['categories[]'] 
+        : [req.body['categories[]']];
+    }
+    
     const sellerId = req.user.id;
     
     // Check if product exists and belongs to seller
@@ -145,14 +183,14 @@ exports.updateProduct = async (req, res) => {
       // Update product details
       await client.query(
         'UPDATE Products SET name = $1, description = $2, price = $3, stock = $4, visible = $5 WHERE product_id = $6',
-        [name, description, price, stock, visible, id]
+        [name, description, price, stock, visible === 'true' || visible === true, id]
       );
       
       // Update image if provided
       if (req.file) {
         await client.query(
           'UPDATE Products SET img_path = $1 WHERE product_id = $2',
-          [req.file.path, id]
+          [req.file.filename, id]
         );
       }
       
