@@ -1,0 +1,214 @@
+.auth-container {
+  min-height: calc(100vh - 64px); /* Adjust based on your header height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: var(--color-gray-50);
+}
+
+.auth-form-container {
+  width: 100%;
+  max-width: 450px;
+  padding: 2.5rem;
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.auth-form-container h2 {
+  margin: 0 0 2rem 0;
+  color: var(--color-gray-900);
+  font-size: 1.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.error-message {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--color-danger-50);
+  border: 1px solid var(--color-danger-200);
+  border-radius: 0.5rem;
+  color: var(--color-danger);
+  font-size: 0.875rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--color-gray-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  color: var(--color-gray-900);
+  background-color: white;
+  transition: all 0.15s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-group .address-input {
+  min-height: 60px;
+  max-height: 100px;
+}
+
+.auth-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  margin-top: 1rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.auth-button:hover {
+  background-color: var(--color-primary-600);
+}
+
+.auth-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: var(--color-gray-600);
+  font-size: 0.875rem;
+}
+
+.auth-footer a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 0.25rem;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* Password strength indicator */
+.password-strength {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.password-strength.weak {
+  color: var(--color-danger);
+}
+
+.password-strength.medium {
+  color: var(--color-warning);
+}
+
+.password-strength.strong {
+  color: var(--color-success);
+}
+
+/* Social login buttons */
+.social-login {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-gray-200);
+  text-align: center;
+}
+
+.social-login-text {
+  display: inline-block;
+  padding: 0 1rem;
+  margin-bottom: 1rem;
+  background-color: white;
+  color: var(--color-gray-500);
+  font-size: 0.875rem;
+  transform: translateY(-50%);
+}
+
+.social-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.social-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.5rem;
+  background-color: white;
+  color: var(--color-gray-700);
+  transition: all 0.15s ease;
+}
+
+.social-button:hover {
+  background-color: var(--color-gray-50);
+  border-color: var(--color-gray-300);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .auth-container {
+    padding: 1rem;
+  }
+
+  .auth-form-container {
+    padding: 1.5rem;
+  }
+
+  .auth-form-container h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 0.875rem;
+  }
+}
+
+.forgot-password {
+  display: block;
+  text-align: right;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,21 @@
+.admin-layout {
+  display: flex;
+  min-height: calc(100vh - var(--header-height));
+  background-color: var(--color-gray-50);
+}
+
+.admin-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-content {
+    padding: 1rem;
+  }
+} 

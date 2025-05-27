@@ -1,0 +1,264 @@
+.seller-orders {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+.orders-header {
+  margin-bottom: 2rem;
+}
+
+.orders-header h1 {
+  font-size: 1.5rem;
+  color: var(--color-gray-900);
+  margin-bottom: 1rem;
+}
+
+.orders-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  flex: 1;
+}
+
+.search-bar svg {
+  color: var(--color-gray-400);
+  margin-right: 0.5rem;
+}
+
+.search-bar input {
+  border: none;
+  background: none;
+  outline: none;
+  width: 100%;
+  color: var(--color-gray-900);
+}
+
+.filter-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+}
+
+.filter-dropdown svg {
+  color: var(--color-gray-400);
+}
+
+.filter-dropdown select {
+  border: none;
+  background: none;
+  outline: none;
+  color: var(--color-gray-900);
+  cursor: pointer;
+}
+
+.orders-list {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  padding: 1rem;
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-600);
+  font-weight: 500;
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  background-color: var(--color-yellow-50);
+  color: var(--color-yellow-700);
+}
+
+.status-processing {
+  background-color: var(--color-blue-50);
+  color: var(--color-blue-700);
+}
+
+.status-shipped {
+  background-color: var(--color-green-50);
+  color: var(--color-green-700);
+}
+
+.status-delivered {
+  background-color: var(--color-purple-50);
+  color: var(--color-purple-700);
+}
+
+.status-cancelled {
+  background-color: var(--color-red-50);
+  color: var(--color-red-700);
+}
+
+.order-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.view-btn {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+.view-btn:hover {
+  background-color: var(--color-gray-200);
+}
+
+.process-btn {
+  background-color: var(--color-blue-50);
+  color: var(--color-blue-700);
+}
+
+.process-btn:hover {
+  background-color: var(--color-blue-100);
+}
+
+.ship-btn {
+  background-color: var(--color-green-50);
+  color: var(--color-green-700);
+}
+
+.ship-btn:hover {
+  background-color: var(--color-green-100);
+}
+
+/* Modal Styles */
+.order-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 0.5rem;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--color-gray-500);
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-700);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.order-info {
+  margin-bottom: 2rem;
+}
+
+.order-info p {
+  margin: 0.5rem 0;
+  color: var(--color-gray-700);
+}
+
+.order-items h3 {
+  font-size: 1.125rem;
+  color: var(--color-gray-900);
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .orders-actions {
+    flex-direction: column;
+  }
+
+  .search-bar,
+  .filter-dropdown {
+    width: 100%;
+  }
+
+  .order-actions {
+    flex-direction: column;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+  }
+} 

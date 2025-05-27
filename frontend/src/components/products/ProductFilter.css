@@ -1,0 +1,140 @@
+.product-filter {
+  position: relative;
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filter-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-toggle-button:hover {
+  background-color: #f7fafc;
+  border-color: #cbd5e0;
+}
+
+.filter-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-width: 300px;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.filter-section {
+  margin-bottom: 1.5rem;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-section h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2d3748;
+}
+
+.filter-section select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+  color: #4a5568;
+  background-color: white;
+}
+
+.price-range-inputs {
+  margin-bottom: 1rem;
+}
+
+.price-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.price-input-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+  color: #4a5568;
+}
+
+.price-input-group span {
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+.apply-price-button {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.apply-price-button:hover {
+  background-color: #3182ce;
+}
+
+.clear-filters-button {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 1rem;
+}
+
+.clear-filters-button:hover {
+  background-color: #c53030;
+}
+
+@media (max-width: 640px) {
+  .filter-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    border-radius: 1rem 1rem 0 0;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+} 
