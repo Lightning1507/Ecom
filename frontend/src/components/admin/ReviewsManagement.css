@@ -1,0 +1,328 @@
+.reviews-management {
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.reviews-header h1 {
+  margin: 0;
+  color: var(--color-gray-900);
+}
+
+.reviews-stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--color-gray-600);
+}
+
+.reviews-filters {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background-color: var(--color-gray-50);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  align-items: center;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-gray-400);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  background-color: white;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-50);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filter-item {
+  position: relative;
+  min-width: 140px;
+  max-width: 160px;
+  display: flex;
+  align-items: center;
+}
+
+.filter-item:first-child {
+  display: flex;
+  align-items: center;
+}
+
+.filter-item svg {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-gray-400);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.filter-item select {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-gray-900);
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+
+.filter-item:first-child select {
+  padding-left: 2.5rem;
+}
+
+.filter-item select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-50);
+}
+
+.filter-item select:hover {
+  border-color: var(--color-gray-300);
+}
+
+.reviews-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.review-card {
+  padding: 1.5rem;
+  background-color: white;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.review-card.pending {
+  border-left: 4px solid var(--color-warning);
+}
+
+.review-card.approved {
+  border-left: 4px solid var(--color-success);
+}
+
+.review-card.rejected {
+  border-left: 4px solid var(--color-danger);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.review-product h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-gray-900);
+}
+
+.product-id {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge.pending {
+  background-color: var(--color-warning-50);
+  color: var(--color-warning);
+}
+
+.status-badge.approved {
+  background-color: var(--color-success-50);
+  color: var(--color-success);
+}
+
+.status-badge.rejected {
+  background-color: var(--color-danger-50);
+  color: var(--color-danger);
+}
+
+.review-content {
+  margin-bottom: 1rem;
+}
+
+.review-rating {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.star-filled {
+  color: var(--color-warning);
+  fill: var(--color-warning);
+}
+
+.star-empty {
+  color: var(--color-gray-300);
+}
+
+.review-text {
+  margin: 0;
+  color: var(--color-gray-700);
+  line-height: 1.5;
+}
+
+.review-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+}
+
+.review-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-gray-100);
+}
+
+.review-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 0.375rem;
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-600);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-approve {
+  background-color: var(--color-success-50) !important;
+  color: var(--color-success) !important;
+}
+
+.btn-approve:hover {
+  background-color: var(--color-success-100) !important;
+}
+
+.btn-reject {
+  background-color: var(--color-warning-50) !important;
+  color: var(--color-warning) !important;
+}
+
+.btn-reject:hover {
+  background-color: var(--color-warning-100) !important;
+}
+
+.btn-delete {
+  background-color: var(--color-danger-50) !important;
+  color: var(--color-danger) !important;
+}
+
+.btn-delete:hover {
+  background-color: var(--color-danger-100) !important;
+}
+
+@media (max-width: 1024px) {
+  .reviews-filters {
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    width: auto;
+  }
+
+  .filter-item {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 640px) {
+  .reviews-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .filter-item {
+    flex: 1;
+    min-width: 100%;
+  }
+} 
