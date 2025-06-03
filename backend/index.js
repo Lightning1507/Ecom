@@ -289,18 +289,9 @@ app.get('/', (req, res) => {
   res.send('Backend server is running!');
 });
 
-// Product routes
-app.post('/api/products', authenticateUser, upload.single('image'), productController.createProduct);
-app.get('/api/products', productController.getAllProducts);
-app.get('/api/products/:id', productController.getProductById);
-app.put('/api/products/:id', authenticateUser, upload.single('image'), productController.updateProduct);
-app.delete('/api/products/:id', authenticateUser, productController.deleteProduct);
-app.get('/api/products/seller/my-products', authenticateUser, productController.getSellerProducts);
-
 // Category routes
 app.get('/api/categories', categoryController.getAllCategories);
 app.post('/api/categories', categoryController.createCategory);
-app.get('/api/products/categories/all', productController.getAllCategories);
 
 // Debug route for categories
 app.get('/api/debug/categories', async (req, res) => {
@@ -363,7 +354,7 @@ app.get('/api/debug/categories', async (req, res) => {
   }
 });
 
-// Register routes
+// Mount product routes
 app.use('/api/products', productRoutes);
 
 // Create seller profile

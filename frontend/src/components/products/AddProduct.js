@@ -82,7 +82,7 @@ const AddProduct = () => {
     setError('');
     
     // Validate form data
-    if (!formData.name || !formData.description || !formData.price || !formData.stock) {
+    if (!formData.name || !formData.price || !formData.stock) {
       setError('Please fill in all required fields');
       setLoading(false);
       return;
@@ -190,7 +190,6 @@ const AddProduct = () => {
             value={formData.description}
             onChange={handleChange}
             rows="4"
-            required
           />
         </div>
         

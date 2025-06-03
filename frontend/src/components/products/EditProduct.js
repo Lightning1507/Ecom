@@ -28,7 +28,7 @@ const EditProduct = () => {
     const fetchProductAndCategories = async () => {
       try {
         // Fetch product details
-        const productResponse = await fetch(`/api/products/${id}`, {
+        const productResponse = await fetch(`http://localhost:5000/api/products/${id}`, {
           headers: {
             'Authorization': `Bearer ${user.token}`
           }
@@ -41,7 +41,7 @@ const EditProduct = () => {
         const productData = await productResponse.json();
         
         // Fetch categories
-        const categoriesResponse = await fetch('/api/categories');
+        const categoriesResponse = await fetch('http://localhost:5000/api/categories');
         const categoriesData = await categoriesResponse.json();
         
         setCategories(categoriesData.categories);
@@ -57,7 +57,7 @@ const EditProduct = () => {
         });
         
         if (productData.product.img_path) {
-          setCurrentImage(`/uploads/${productData.product.img_path}`);
+          setCurrentImage(productData.product.img_path);
         }
       } catch (err) {
         setError(err.message);
@@ -125,8 +125,8 @@ const EditProduct = () => {
     }
     
     try {
-      const response = await fetch(`/api/products/${id}`, { // Use the correct URL with ID
-        method: 'PUT', // Use PUT for updates
+      const response = await fetch(`http://localhost:5000/api/products/${id}`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${user.token}`
         },
@@ -178,7 +178,6 @@ const EditProduct = () => {
             value={formData.description}
             onChange={handleChange}
             rows="4"
-            required
           />
         </div>
         

@@ -161,20 +161,42 @@ exports.getSellerProducts = async (req, res) => {
       [sellerId]
     );
     
+    // Fetch categories for all products in one query
+    const productIds = result.rows.map(product => product.product_id);
+    let categoriesMap = {};
+    if (productIds.length > 0) {
+      const categoriesResult = await pool.query(
+        `SELECT pc.product_id, c.category_id, c.name FROM Product_categories pc
+         JOIN Categories c ON pc.category_id = c.category_id
+         WHERE pc.product_id = ANY($1)`,
+        [productIds]
+      );
+      // Map product_id to array of categories
+      categoriesResult.rows.forEach(row => {
+        if (!categoriesMap[row.product_id]) categoriesMap[row.product_id] = [];
+        categoriesMap[row.product_id].push({ category_id: row.category_id, name: row.name });
+      });
+    }
+    
     // Transform the data to match the frontend's expected format
-    const products = result.rows.map(product => ({
-      id: product.product_id,
-      name: product.name,
-      description: product.description,
-      price: parseFloat(product.price),
-      stock: parseInt(product.stock),
-      status: product.visible ? 'active' : 'inactive',
-      featured: false,
-      rating: 0,
-      sales: 0,
-      seller: storeName,
-      img_path: product.img_path
-    }));
+    const products = result.rows.map(product => {
+      const categories = categoriesMap[product.product_id] || [];
+      return {
+        id: product.product_id,
+        name: product.name,
+        description: product.description,
+        price: parseFloat(product.price),
+        stock: parseInt(product.stock),
+        status: product.visible ? 'active' : 'inactive',
+        featured: false,
+        rating: 0,
+        sales: 0,
+        seller: storeName,
+        img_path: product.img_path,
+        categories: categories, // array of {category_id, name}
+        category: categories.length > 0 ? categories[0].name : 'Uncategorized' // first category name or 'Uncategorized'
+      };
+    });
     
     res.json({ products });
   } catch (err) {
