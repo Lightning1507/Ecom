@@ -48,7 +48,14 @@ const Product = ({ product }) => {
         </div>
         <p className="product-description">{description}</p>
         <div className="product-footer">
-          <span className="product-price">${price.toLocaleString()}</span>
+          <span className="product-price">
+            {new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            }).format(price)}
+          </span>
           <motion.button
             className="add-to-cart-btn"
             whileTap={{ scale: 0.95 }}

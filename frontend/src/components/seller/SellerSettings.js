@@ -60,13 +60,49 @@ const SellerSettings = () => {
     }));
   };
 
-  const handleSave = (section) => {
-    // Here you would typically make an API call to save the changes
-    setSettings(prev => ({
-      ...prev,
-      [section]: formData[section]
-    }));
-    setIsEditing(false);
+  const handleSave = async (section) => {
+    try {
+      if (section === 'store') {
+        const userData = localStorage.getItem('user');
+        if (!userData) {
+          throw new Error('No authentication token found. Please log in.');
+        }
+
+        const { token } = JSON.parse(userData);
+        if (!token) {
+          throw new Error('No authentication token found. Please log in.');
+        }
+
+        const response = await fetch('http://localhost:5000/api/sellers/profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            store_name: formData.store.name,
+            description: formData.store.description
+          })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to save store settings');
+        }
+
+        alert('Store settings saved successfully!');
+      }
+
+      setSettings(prev => ({
+        ...prev,
+        [section]: formData[section]
+      }));
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert(error.message || 'Failed to save settings. Please try again.');
+    }
   };
 
   const renderProfileSettings = () => (

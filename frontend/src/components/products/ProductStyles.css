@@ -318,3 +318,39 @@
   margin: 0;
   color: #333;
 }
+
+.categories-select {
+  width: 100%;
+  min-height: 120px;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  margin-bottom: 0.5rem;
+}
+
+.categories-select option {
+  padding: 8px;
+  margin: 2px 0;
+  cursor: pointer;
+}
+
+.categories-select option:checked {
+  background-color: #e2e8f0;
+  color: #2d3748;
+}
+
+.loading-text {
+  color: #666;
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.error-message {
+  color: #e53e3e;
+  background-color: #fff5f5;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  border: 1px solid #feb2b2;
+}

@@ -1,23 +1,23 @@
 ----------------------
 -- 1. Users (Tích hợp tất cả vai trò)
 ----------------------
-CREATE TABLE "Users" (
+CREATE TABLE Users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    address TEXT,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(20) DEFAULT 'customer' CHECK (role IN ('admin', 'seller', 'customer')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    full_name VARCHAR(100),
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(20) UNIQUE,
+    address TEXT,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'seller', 'admin', 'shipper')),
+    locked BOOLEAN DEFAULT FALSE
 );
 
 ----------------------
 -- 2. Seller Profiles
 ----------------------
 CREATE TABLE Sellers (
-    seller_id INTEGER PRIMARY KEY REFERENCES "Users"(user_id),
+    seller_id INTEGER PRIMARY KEY REFERENCES Users(user_id),
     store_name VARCHAR(100) NOT NULL,
     description TEXT,
     qr_img_path TEXT
@@ -27,7 +27,7 @@ CREATE TABLE Sellers (
 -- 3. Shipper Profiles
 ----------------------
 CREATE TABLE Shipping_units (
-    Shipping_units_id INTEGER PRIMARY KEY REFERENCES "Users"(user_id),
+    Shipping_units_id INTEGER PRIMARY KEY REFERENCES Users(user_id),
     company_name VARCHAR(100)
 );
 

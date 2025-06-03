@@ -8,10 +8,10 @@ const mockOrders = [
     id: "ORD001",
     customer: "John Doe",
     items: [
-      { name: "Product 1", quantity: 2, price: 29.99 },
-      { name: "Product 2", quantity: 1, price: 49.99 }
+      { name: "Product 1", quantity: 2, price: 749000 },
+      { name: "Product 2", quantity: 1, price: 1290000 }
     ],
-    total: 109.97,
+    total: 2788000,
     status: "pending",
     date: "2024-03-15T10:30:00Z"
   },
@@ -19,9 +19,9 @@ const mockOrders = [
     id: "ORD002",
     customer: "Jane Smith",
     items: [
-      { name: "Product 3", quantity: 1, price: 79.99 }
+      { name: "Product 3", quantity: 1, price: 1990000 }
     ],
-    total: 79.99,
+    total: 1990000,
     status: "processing",
     date: "2024-03-14T15:45:00Z"
   },
@@ -29,10 +29,10 @@ const mockOrders = [
     id: "ORD003",
     customer: "Mike Johnson",
     items: [
-      { name: "Product 1", quantity: 3, price: 29.99 },
-      { name: "Product 4", quantity: 2, price: 39.99 }
+      { name: "Product 1", quantity: 3, price: 749000 },
+      { name: "Product 4", quantity: 2, price: 990000 }
     ],
-    total: 169.95,
+    total: 4227000,
     status: "shipped",
     date: "2024-03-13T09:15:00Z"
   }
@@ -200,15 +200,30 @@ const SellerOrders = () => {
                       <tr key={index}>
                         <td>{item.name}</td>
                         <td>{item.quantity}</td>
-                        <td>${item.price.toFixed(2)}</td>
-                        <td>${(item.quantity * item.price).toFixed(2)}</td>
+                        <td>{new Intl.NumberFormat('vi-VN', {
+                          style: 'currency',
+                          currency: 'VND',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        }).format(item.price)}</td>
+                        <td>{new Intl.NumberFormat('vi-VN', {
+                          style: 'currency',
+                          currency: 'VND',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        }).format(item.quantity * item.price)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan="3"><strong>Total</strong></td>
-                      <td><strong>${selectedOrder.total.toFixed(2)}</strong></td>
+                      <td><strong>{new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                      }).format(selectedOrder.total)}</strong></td>
                     </tr>
                   </tfoot>
                 </table>

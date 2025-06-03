@@ -8,21 +8,21 @@ const featuredProducts = [
   {
     id: 1,
     name: 'Wireless Gaming Mouse',
-    price: 59.99,
+    price: 1490000,
     image: 'https://res.cloudinary.com/dcjxg0bvb/image/upload/v1699425293/mouse_qhvx3p.jpg',
     category: 'Gaming'
   },
   {
     id: 2,
     name: 'Mechanical Keyboard',
-    price: 129.99,
+    price: 2990000,
     image: 'https://res.cloudinary.com/dcjxg0bvb/image/upload/v1699425293/keyboard_kkpz8k.jpg',
     category: 'Gaming'
   },
   {
     id: 3,
     name: 'Gaming Headset',
-    price: 89.99,
+    price: 1990000,
     image: 'https://res.cloudinary.com/dcjxg0bvb/image/upload/v1699425293/headset_mvqwwi.jpg',
     category: 'Gaming'
   }

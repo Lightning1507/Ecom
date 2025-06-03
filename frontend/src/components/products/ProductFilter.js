@@ -112,11 +112,11 @@ const ProductFilter = ({ filters, setFilters, isOpen, onToggle }) => {
               onChange={(e) => handleFilterChange('priceRange', e.target.value)}
             >
               <option value="all">All Prices</option>
-              <option value="0-50">Under $50</option>
-              <option value="51-100">$51 - $100</option>
-              <option value="101-200">$101 - $200</option>
-              <option value="201-500">$201 - $500</option>
-              <option value="501+">Over $500</option>
+              <option value="0-1000000">Under 1,000,000₫</option>
+              <option value="1000000-5000000">1,000,000₫ - 5,000,000₫</option>
+              <option value="5000000-10000000">5,000,000₫ - 10,000,000₫</option>
+              <option value="10000000-50000000">10,000,000₫ - 50,000,000₫</option>
+              <option value="50000000+">Over 50,000,000₫</option>
             </select>
           </div>
 

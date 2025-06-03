@@ -3,6 +3,7 @@
   min-height: 100vh;
   background-color: #f8fafc;
   padding-top: 60px; /* Space for header */
+  position: relative;
 }
 
 .seller-sidebar {
@@ -10,8 +11,8 @@
   background-color: #ffffff;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
   padding: 1rem;
-  position: fixed;
-  height: calc(100vh - 120px); /* Account for header and footer */
+  position: sticky;
+  height: calc(100vh - 60px); /* Account for header only */
   top: 60px; /* Header height */
   left: 0;
   z-index: 100;
@@ -68,8 +69,7 @@
 
 .seller-main {
   flex: 1;
-  min-height: calc(100vh - 120px); /* Account for header and footer */
-  margin-left: 220px;
+  min-height: calc(100vh - 60px); /* Account for header */
   padding: 2rem;
   background-color: #f8fafc;
   transition: margin-left 0.3s ease;
@@ -100,6 +100,7 @@
   }
 
   .seller-sidebar {
+    position: fixed;
     width: 220px;
     top: 0;
     height: 100vh;

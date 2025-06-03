@@ -7,6 +7,8 @@ const pool = require('./db');
 const bcrypt = require('bcryptjs');
 const productController = require('./controllers/product.controller');
 const categoryController = require('./controllers/category.controller');
+const productRoutes = require('./routes/product.routes');
+const jwt = require('jsonwebtoken');
 
 // Load environment variables
 require('dotenv').config();
@@ -26,19 +28,20 @@ app.use(express.json());
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+const productsDir = path.join(uploadsDir, 'products');
+if (!fs.existsSync(productsDir)) {
+  fs.mkdirSync(productsDir, { recursive: true });
 }
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    cb(null, uploadsDir);
+    cb(null, productsDir);
   },
   filename: function(req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    cb(null, 'product-' + uniqueSuffix + ext);
   }
 });
 
@@ -60,16 +63,48 @@ const upload = multer({
 // Serve static files from the uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Simple authentication middleware (temporary)
+// Authentication middleware
 const authenticateUser = (req, res, next) => {
-  // For testing purposes, set a default user ID
-  // In a real app, you would verify the token from Authorization header
-  req.user = {
-    id: 1, // Default user ID for testing
-    role: 'seller'
-  };
-  next();
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false, 
+      message: 'No token provided' 
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // Verify the token and extract user data
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    req.user = decoded.user;
+    next();
+  } catch (err) {
+    res.status(401).json({ 
+      success: false, 
+      message: 'Invalid token' 
+    });
+  }
 };
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({
+      success: false,
+      message: 'File upload error',
+      error: err.message
+    });
+  }
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: err.message
+  });
+});
 
 // Test route
 app.get('/api/test', (req, res) => {
@@ -125,7 +160,21 @@ app.post('/api/users/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Success - send user data
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        user: {
+          id: user.user_id,
+          username: user.username,
+          email: user.email,
+          role: user.role
+        }
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    // Success - send user data and token
     res.json({
       user: {
         id: user.user_id,
@@ -133,7 +182,7 @@ app.post('/api/users/login', async (req, res) => {
         email: user.email,
         role: user.role
       },
-      token: 'dummy-token-for-now'
+      token
     });
 
   } catch (error) {
@@ -310,6 +359,62 @@ app.get('/api/debug/categories', async (req, res) => {
     res.status(500).json({
       error: error.message,
       stack: error.stack
+    });
+  }
+});
+
+// Register routes
+app.use('/api/products', productRoutes);
+
+// Create seller profile
+app.post('/api/sellers/profile', authenticateUser, async (req, res) => {
+  try {
+    const { store_name, description } = req.body;
+    const userId = req.user.id;
+
+    // Check if user has seller role
+    const userResult = await pool.query(
+      'SELECT role FROM Users WHERE user_id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0 || userResult.rows[0].role !== 'seller') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Only users with seller role can create a seller profile' 
+      });
+    }
+
+    // Check if seller profile already exists
+    const existingProfile = await pool.query(
+      'SELECT * FROM Sellers WHERE seller_id = $1',
+      [userId]
+    );
+
+    if (existingProfile.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Seller profile already exists' 
+      });
+    }
+
+    // Create seller profile
+    const result = await pool.query(
+      'INSERT INTO Sellers (seller_id, store_name, description) VALUES ($1, $2, $3) RETURNING *',
+      [userId, store_name, description]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Seller profile created successfully',
+      profile: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Create seller profile error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while creating seller profile' 
     });
   }
 });

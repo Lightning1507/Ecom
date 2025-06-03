@@ -134,9 +134,9 @@ const Category = () => {
                 onChange={(e) => handleFilterChange('priceRange', e.target.value)}
               >
                 <option value="all">All Prices</option>
-                <option value="budget">Budget</option>
-                <option value="mid">Mid-Range</option>
-                <option value="premium">Premium</option>
+                <option value="budget">Under 1,000,000₫</option>
+                <option value="mid">1,000,000₫ - 10,000,000₫</option>
+                <option value="premium">Over 10,000,000₫</option>
               </select>
             </div>
             <div className="filter-group">

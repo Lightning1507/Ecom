@@ -239,7 +239,14 @@ const ProductsList = () => {
               <div className="product-info">
                 <h3>{product.name}</h3>
                 <div className="product-details">
-                  <span className="price">${product.price.toFixed(2)}</span>
+                  <span className="price">
+                    {new Intl.NumberFormat('vi-VN', {
+                      style: 'currency',
+                      currency: 'VND',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0
+                    }).format(product.price)}
+                  </span>
                   <span className="rating">
                     <FiStar /> {product.rating}
                   </span>

@@ -1,57 +1,142 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiPlus, FiSearch, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import './styles.css';
 
-const mockProducts = [
-  {
-    id: 1,
-    name: 'Wireless Gaming Mouse',
-    price: 59.99,
-    stock: 45,
-    category: 'Electronics',
-    status: 'In Stock'
-  },
-  {
-    id: 2,
-    name: 'Mechanical Keyboard',
-    price: 129.99,
-    stock: 28,
-    category: 'Electronics',
-    status: 'Low Stock'
-  },
-  {
-    id: 3,
-    name: 'Gaming Headset',
-    price: 89.99,
-    stock: 0,
-    category: 'Electronics',
-    status: 'Out of Stock'
-  }
-];
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
 const ProductManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [products] = useState(mockProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const getStatusClass = (status) => {
-    switch (status.toLowerCase()) {
-      case 'in stock':
-        return 'status-in-stock';
-      case 'low stock':
-        return 'status-low-stock';
-      case 'out of stock':
-        return 'status-out-of-stock';
-      default:
-        return '';
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const userData = localStorage.getItem('user');
+      
+      if (!userData) {
+        throw new Error('No authentication token found. Please log in.');
+      }
+
+      const { token } = JSON.parse(userData);
+      
+      if (!token) {
+        throw new Error('No authentication token found. Please log in.');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/products/seller/products`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication failed. Please log in again.');
+        }
+        throw new Error('Failed to fetch products');
+      }
+
+      const data = await response.json();
+      console.log('Fetched products:', data);
+      setProducts(data.products || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusClass = (stock) => {
+    if (stock <= 0) return 'status-out-of-stock';
+    if (stock < 10) return 'status-low-stock';
+    return 'status-in-stock';
+  };
+
+  const getStatusText = (stock) => {
+    if (stock <= 0) return 'Out of Stock';
+    if (stock < 10) return 'Low Stock';
+    return 'In Stock';
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const handleDelete = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        const userData = localStorage.getItem('user');
+        if (!userData) {
+          throw new Error('No authentication token found. Please log in.');
+        }
+
+        const { token } = JSON.parse(userData);
+        if (!token) {
+          throw new Error('No authentication token found. Please log in.');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/products/${productId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete product');
+        }
+
+        // Refresh the products list
+        fetchProducts();
+      } catch (err) {
+        console.error('Error deleting product:', err);
+        alert('Failed to delete product. Please try again.');
+      }
     }
   };
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading products...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Error loading products</h2>
+        <p>{error}</p>
+        <button onClick={fetchProducts} className="retry-button">
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="products-management">
@@ -101,12 +186,12 @@ const ProductManagement = () => {
                   transition={{ duration: 0.3 }}
                 >
                   <td>{product.name}</td>
-                  <td>{product.category}</td>
-                  <td>${product.price.toFixed(2)}</td>
+                  <td>{product.category || 'Uncategorized'}</td>
+                  <td>{formatCurrency(product.price)}</td>
                   <td>{product.stock}</td>
                   <td>
-                    <span className={'status-badge ' + getStatusClass(product.status)}>
-                      {product.status}
+                    <span className={'status-badge ' + getStatusClass(product.stock)}>
+                      {getStatusText(product.stock)}
                     </span>
                   </td>
                   <td>
@@ -121,10 +206,7 @@ const ProductManagement = () => {
                       <button
                         className="delete-btn"
                         title="Delete Product"
-                        onClick={() => {
-                          // Add delete confirmation logic here
-                          alert('Delete product: ' + product.name);
-                        }}
+                        onClick={() => handleDelete(product.id)}
                       >
                         <FiTrash2 size={18} />
                       </button>
@@ -135,6 +217,12 @@ const ProductManagement = () => {
             </tbody>
           </table>
         </div>
+
+        {filteredProducts.length === 0 && (
+          <div className="no-products">
+            <p>No products found matching your search criteria.</p>
+          </div>
+        )}
       </motion.div>
     </div>
   );

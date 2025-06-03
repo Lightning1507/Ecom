@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FiSearch, 
   FiEdit2, 
@@ -10,51 +10,12 @@ import {
 } from 'react-icons/fi';
 import './ProductManagement.css';
 
-const ProductManagement = () => {
-  // Mock data - replace with API calls
-  const mockProducts = [
-    {
-      id: 1,
-      name: 'Wireless Headphones',
-      seller: 'Tech Store',
-      category: 'Electronics',
-      price: 99.99,
-      stock: 45,
-      status: 'active',
-      featured: true,
-      rating: 4.5,
-      sales: 128,
-      lastUpdated: '2024-03-10'
-    },
-    {
-      id: 2,
-      name: 'Summer Dress',
-      seller: 'Fashion Boutique',
-      category: 'Clothing',
-      price: 59.99,
-      stock: 23,
-      status: 'active',
-      featured: false,
-      rating: 4.8,
-      sales: 89,
-      lastUpdated: '2024-03-12'
-    },
-    {
-      id: 3,
-      name: 'Ceramic Vase',
-      seller: 'Home Decor Plus',
-      category: 'Home & Living',
-      price: 34.99,
-      stock: 12,
-      status: 'inactive',
-      featured: false,
-      rating: 4.2,
-      sales: 45,
-      lastUpdated: '2024-03-08'
-    }
-  ];
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
-  const [products, setProducts] = useState(mockProducts);
+const ProductManagement = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -64,6 +25,36 @@ const ProductManagement = () => {
 
   const categories = ['Electronics', 'Clothing', 'Home & Living', 'Books', 'Sports', 'Beauty'];
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/products/seller/products`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+
+      const data = await response.json();
+      setProducts(data.products || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err.message || 'Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
@@ -71,12 +62,12 @@ const ProductManagement = () => {
   };
 
   const applyFilters = (search = searchTerm, category = filterCategory, status = filterStatus, featured = filterFeatured) => {
-    let filtered = mockProducts;
+    let filtered = [...products];
 
     if (search) {
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(search) ||
-        product.seller.toLowerCase().includes(search)
+        product.category.toLowerCase().includes(search)
       );
     }
 
@@ -108,10 +99,10 @@ const ProductManagement = () => {
           comparison = a.stock - b.stock;
           break;
         case 'sales':
-          comparison = a.sales - b.sales;
+          comparison = (a.sales || 0) - (b.sales || 0);
           break;
         case 'rating':
-          comparison = a.rating - b.rating;
+          comparison = (a.rating || 0) - (b.rating || 0);
           break;
         default:
           comparison = 0;
@@ -129,34 +120,66 @@ const ProductManagement = () => {
     setFilterFeatured('all');
     setSortBy('name');
     setSortOrder('asc');
-    setProducts(mockProducts);
+    fetchProducts();
   };
 
-  const handleStatusToggle = (productId) => {
-    setProducts(products.map(product => {
-      if (product.id === productId) {
-        const newStatus = product.status === 'active' ? 'inactive' : 'active';
-        return { ...product, status: newStatus };
+  const handleStatusToggle = async (productId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/seller/products/${productId}/toggle-status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authorization header if needed
+          // 'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update product status');
       }
-      return product;
-    }));
+
+      // Refresh the products list
+      fetchProducts();
+    } catch (err) {
+      console.error('Error updating product status:', err);
+      setError(err.message || 'Failed to update product status');
+    }
   };
 
-  const handleFeaturedToggle = (productId) => {
-    setProducts(products.map(product => {
-      if (product.id === productId) {
-        return { ...product, featured: !product.featured };
-      }
-      return product;
-    }));
+  const handleFeaturedToggle = async (productId) => {
+    // Show a message that featured functionality is not available
+    alert('Featured status is not supported in the current version.');
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading products...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Error loading products</h2>
+        <p>{error}</p>
+        <button onClick={fetchProducts} className="btn-primary">
+          <FiRefreshCw /> Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="product-management">
@@ -211,21 +234,6 @@ const ProductManagement = () => {
           </div>
 
           <div className="filter-group">
-            <label>Featured:</label>
-            <select 
-              value={filterFeatured}
-              onChange={(e) => {
-                setFilterFeatured(e.target.value);
-                applyFilters(searchTerm, filterCategory, filterStatus, e.target.value);
-              }}
-            >
-              <option value="all">All Products</option>
-              <option value="featured">Featured</option>
-              <option value="not-featured">Not Featured</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
             <label>Sort By:</label>
             <select 
               value={`${sortBy}-${sortOrder}`}
@@ -242,8 +250,6 @@ const ProductManagement = () => {
               <option value="price-desc">Price (High-Low)</option>
               <option value="stock-asc">Stock (Low-High)</option>
               <option value="stock-desc">Stock (High-Low)</option>
-              <option value="sales-desc">Best Selling</option>
-              <option value="rating-desc">Top Rated</option>
             </select>
           </div>
 
@@ -258,14 +264,10 @@ const ProductManagement = () => {
           <thead>
             <tr>
               <th>Product</th>
-              <th>Seller</th>
               <th>Category</th>
               <th>Price</th>
               <th>Stock</th>
               <th>Status</th>
-              <th>Featured</th>
-              <th>Sales</th>
-              <th>Rating</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -273,10 +275,9 @@ const ProductManagement = () => {
             {products.map(product => (
               <tr key={product.id}>
                 <td>{product.name}</td>
-                <td>{product.seller}</td>
                 <td>
                   <span className="category-badge">
-                    {product.category}
+                    {product.category || 'Uncategorized'}
                   </span>
                 </td>
                 <td>{formatCurrency(product.price)}</td>
@@ -289,22 +290,6 @@ const ProductManagement = () => {
                   <span className={`status-badge ${product.status}`}>
                     {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
                   </span>
-                </td>
-                <td>
-                  <button 
-                    className={`featured-toggle ${product.featured ? 'active' : ''}`}
-                    onClick={() => handleFeaturedToggle(product.id)}
-                  >
-                    {product.featured ? <FiToggleRight /> : <FiToggleLeft />}
-                  </button>
-                </td>
-                <td>{product.sales}</td>
-                <td>
-                  <div className="rating">
-                    <span className={`rating-value ${product.rating >= 4 ? 'high' : product.rating >= 3 ? 'medium' : 'low'}`}>
-                      {product.rating.toFixed(1)}
-                    </span>
-                  </div>
                 </td>
                 <td>
                   <div className="action-buttons">

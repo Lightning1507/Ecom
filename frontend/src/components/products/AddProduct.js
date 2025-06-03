@@ -25,11 +25,20 @@ const AddProduct = () => {
     // Fetch categories
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/api/categories');
+        console.log('Fetching categories...');
+        const response = await fetch('http://localhost:5000/api/categories', {
+          credentials: 'include'
+        });
         const data = await response.json();
-        setCategories(data.categories);
+        console.log('Categories data received:', data);
+        if (data.categories) {
+          setCategories(data.categories);
+        } else {
+          console.error('No categories array in response:', data);
+        }
       } catch (err) {
         console.error('Failed to fetch categories:', err);
+        setError('Failed to load categories. Please try refreshing the page.');
       }
     };
     
@@ -42,6 +51,7 @@ const AddProduct = () => {
         e.target.selectedOptions,
         option => parseInt(option.value)
       );
+      console.log('Selected categories:', selectedOptions);
       setFormData({
         ...formData,
         [e.target.name]: selectedOptions
@@ -71,31 +81,74 @@ const AddProduct = () => {
     setLoading(true);
     setError('');
     
+    // Validate form data
+    if (!formData.name || !formData.description || !formData.price || !formData.stock) {
+      setError('Please fill in all required fields');
+      setLoading(false);
+      return;
+    }
+
+    // Validate price and stock
+    if (parseFloat(formData.price) <= 0) {
+      setError('Price must be greater than 0');
+      setLoading(false);
+      return;
+    }
+
+    if (parseInt(formData.stock) < 0) {
+      setError('Stock cannot be negative');
+      setLoading(false);
+      return;
+    }
+    
     const formDataToSend = new FormData();
-    formDataToSend.append('name', formData.name);
-    formDataToSend.append('description', formData.description);
+    formDataToSend.append('name', formData.name.trim());
+    formDataToSend.append('description', formData.description.trim());
     formDataToSend.append('price', formData.price);
     formDataToSend.append('stock', formData.stock);
     
-    formData.categories.forEach(categoryId => {
-      formDataToSend.append('categories[]', categoryId);
-    });
+    // Add categories if selected
+    if (formData.categories.length > 0) {
+      formData.categories.forEach(categoryId => {
+        formDataToSend.append('categories[]', categoryId);
+      });
+    }
     
+    // Add image if selected
     if (image) {
       formDataToSend.append('image', image);
     }
     
     try {
-      const response = await fetch('/api/products', {
+      console.log('Sending product data:', {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        stock: formData.stock,
+        categories: formData.categories,
+        hasImage: !!image
+      });
+
+      const response = await fetch('http://localhost:5000/api/products', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${user.token}`
-          // Don't include Content-Type header when using FormData
+          'Authorization': `Bearer ${user?.token || 'dummy-token'}`
         },
+        credentials: 'include',
         body: formDataToSend
       });
       
-      const data = await response.json();
+      // Log the raw response for debugging
+      const responseText = await response.text();
+      console.log('Raw server response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse server response:', parseError);
+        throw new Error('Server returned invalid JSON. Please try again or contact support.');
+      }
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create product');
@@ -104,7 +157,8 @@ const AddProduct = () => {
       alert('Product created successfully!');
       navigate('/seller/products');
     } catch (err) {
-      setError(err.message);
+      console.error('Error creating product:', err);
+      setError(err.message || 'Failed to create product. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -142,7 +196,7 @@ const AddProduct = () => {
         
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="price">Price (₹)</label>
+            <label htmlFor="price">Price (₫)</label>
             <input
               type="number"
               id="price"
@@ -150,7 +204,7 @@ const AddProduct = () => {
               value={formData.price}
               onChange={handleChange}
               min="0"
-              step="0.01"
+              step="1"
               required
             />
           </div>
@@ -171,19 +225,24 @@ const AddProduct = () => {
         
         <div className="form-group">
           <label htmlFor="categories">Categories</label>
-          <select
-            id="categories"
-            name="categories"
-            multiple
-            value={formData.categories}
-            onChange={handleChange}
-          >
-            {categories.map(category => (
-              <option key={category.category_id} value={category.category_id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          {categories.length > 0 ? (
+            <select
+              id="categories"
+              name="categories"
+              multiple
+              value={formData.categories}
+              onChange={handleChange}
+              className="categories-select"
+            >
+              {categories.map(category => (
+                <option key={category.category_id} value={category.category_id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="loading-text">Loading categories...</p>
+          )}
           <small>Hold Ctrl (or Cmd) to select multiple categories</small>
         </div>
         

@@ -38,11 +38,14 @@ router.get('/categories/all', productController.getAllCategories);
 
 // Protected routes (seller only)
 router.post('/', auth, sellerAuth, upload.single('image'), productController.createProduct);
-router.get('/seller/my-products', auth, sellerAuth, productController.getSellerProducts);
+router.get('/seller/products', auth, sellerAuth, productController.getSellerProducts);
 router.put('/:id', auth, sellerAuth, upload.single('image'), productController.updateProduct);
 router.delete('/:id', auth, sellerAuth, productController.deleteProduct);
 
-// Add this to your product.routes.js file
+// New seller-specific routes
+router.put('/seller/products/:id/toggle-status', auth, sellerAuth, productController.toggleProductStatus);
+router.put('/seller/products/:id/toggle-featured', auth, sellerAuth, productController.toggleProductFeatured);
+
 // Debug route - no authentication required
 router.get('/debug', (req, res) => {
   res.json({ 
@@ -52,9 +55,11 @@ router.get('/debug', (req, res) => {
       'GET /api/products/:id',
       'GET /api/products/categories/all',
       'POST /api/products',
-      'GET /api/products/seller/my-products',
+      'GET /api/products/seller/products',
       'PUT /api/products/:id',
-      'DELETE /api/products/:id'
+      'DELETE /api/products/:id',
+      'PUT /api/products/seller/products/:id/toggle-status',
+      'PUT /api/products/seller/products/:id/toggle-featured'
     ]
   });
 });
