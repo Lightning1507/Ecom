@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('Error parsing stored user:', error);
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
       }
     }
     setLoading(false);
@@ -50,16 +51,26 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      // In your login function in AuthContext.js
-      if (data.token) {
-        const userData = data.user || data;
+      // Store both user data and token
+      if (data.token && data.user) {
+        const userData = data.user;
         userData.token = data.token; // Add token to user object
+        
+        // Store user data with token
         localStorage.setItem('user', JSON.stringify(userData));
+        // Also store token separately for easier access
+        localStorage.setItem('token', data.token);
+        
         setUser(userData);
+        console.log('Successfully stored user and token:', { user: userData, token: data.token });
       } else {
-        localStorage.setItem('user', JSON.stringify(data.user || data));
-        setUser(data.user || data);
+        console.error('Missing token or user data in response:', data);
+        return {
+          success: false,
+          message: 'Invalid server response. Missing authentication data.'
+        };
       }
+      
       return {success: true};
     } catch (error) {
       console.error('Login error:', error);
@@ -105,6 +116,7 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
   };
 

@@ -66,6 +66,21 @@
   cursor: pointer;
 }
 
+.refresh-btn {
+  background-color: var(--color-blue-600);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background-color: var(--color-blue-700);
+}
+
 .orders-list {
   overflow-x: auto;
 }
@@ -165,6 +180,55 @@ td {
   background-color: var(--color-green-100);
 }
 
+.deliver-btn {
+  background-color: var(--color-purple-50);
+  color: var(--color-purple-700);
+}
+
+.deliver-btn:hover {
+  background-color: var(--color-purple-100);
+}
+
+/* Loading and Error States */
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.loading-state p,
+.empty-state p {
+  color: var(--color-gray-600);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.error-state p {
+  color: var(--color-red-600);
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.retry-btn {
+  background-color: var(--color-red-600);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background-color: var(--color-red-700);
+}
+
 /* Modal Styles */
 .order-modal {
   position: fixed;
@@ -239,13 +303,28 @@ td {
   margin-bottom: 1rem;
 }
 
+.order-actions-modal {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-gray-200);
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.order-actions-modal .action-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
 @media (max-width: 768px) {
   .orders-actions {
     flex-direction: column;
   }
 
   .search-bar,
-  .filter-dropdown {
+  .filter-dropdown,
+  .refresh-btn {
     width: 100%;
   }
 
@@ -260,5 +339,13 @@ td {
   .modal-content {
     width: 95%;
     margin: 1rem;
+  }
+
+  .order-actions-modal {
+    flex-direction: column;
+  }
+
+  .order-actions-modal .action-btn {
+    width: 100%;
   }
 } 

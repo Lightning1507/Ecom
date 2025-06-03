@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const productController = require('./controllers/product.controller');
 const categoryController = require('./controllers/category.controller');
 const productRoutes = require('./routes/product.routes');
+const orderRoutes = require('./routes/order.routes');
 const jwt = require('jsonwebtoken');
 
 // Load environment variables
@@ -356,6 +357,9 @@ app.get('/api/debug/categories', async (req, res) => {
 
 // Mount product routes
 app.use('/api/products', productRoutes);
+
+// Mount order routes
+app.use('/api/orders', orderRoutes);
 
 // Create seller profile
 app.post('/api/sellers/profile', authenticateUser, async (req, res) => {
