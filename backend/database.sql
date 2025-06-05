@@ -77,7 +77,7 @@ CREATE TABLE Product_categories (
 ----------------------
 CREATE TABLE Carts (
     cart_id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES Users(user_id)
+    user_id INTEGER NOT NULL UNIQUE REFERENCES Users(user_id) -- Tích hợp ràng buộc unique tại đây
 );
 
 ----------------------
@@ -96,6 +96,7 @@ CREATE TABLE Cart_items (
 CREATE TABLE Orders (
     order_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES Users(user_id),
+    seller_id INTEGER NOT NULL REFERENCES Sellers(seller_id), -- Đưa vào trực tiếp
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(20) NOT NULL CHECK (
         status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')
@@ -156,7 +157,3 @@ CREATE TABLE Reviews (
     img_path TEXT,
     FOREIGN KEY (order_id, product_id) REFERENCES Order_items(order_id, product_id)
 );
-
-
-ALTER TABLE Carts
-ADD CONSTRAINT unique_cart_per_user UNIQUE(user_id);

@@ -9,6 +9,7 @@ const productController = require('./controllers/product.controller');
 const categoryController = require('./controllers/category.controller');
 const productRoutes = require('./routes/product.routes');
 const orderRoutes = require('./routes/order.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
 const jwt = require('jsonwebtoken');
 
 // Load environment variables
@@ -360,6 +361,9 @@ app.use('/api/products', productRoutes);
 
 // Mount order routes
 app.use('/api/orders', orderRoutes);
+
+// Mount dashboard routes
+app.use('/api/dashboard', dashboardRoutes);
 
 // Create seller profile
 app.post('/api/sellers/profile', authenticateUser, async (req, res) => {

@@ -254,7 +254,7 @@ const EditProduct = () => {
           {(imagePreview || currentImage) && (
             <div className="image-preview">
               <p>Image Preview:</p>
-              <img src={imagePreview || currentImage} alt="Product preview" />
+              <img src={imagePreview || currentImage} alt="Product preview"  />
             </div>
           )}
         </div>
