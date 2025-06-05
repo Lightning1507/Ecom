@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FiHome, FiBox, FiShoppingBag, FiBarChart2, FiSettings, FiMenu, FiX } from 'react-icons/fi';
 import './SellerLayout.css';
 
@@ -26,14 +26,7 @@ const SellerLayout = () => {
       </button>
 
       {/* Sidebar */}
-      <motion.aside
-        className={`seller-sidebar ${isSidebarOpen ? 'open' : ''}`}
-        initial={false}
-        animate={{ 
-          x: isSidebarOpen ? 0 : -220,
-          transition: { type: "spring", stiffness: 300, damping: 30 }
-        }}
-      >
+      <aside className={`seller-sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
           <h2>Seller Dashboard</h2>
         </div>
@@ -49,7 +42,7 @@ const SellerLayout = () => {
             </Link>
           ))}
         </nav>
-      </motion.aside>
+      </aside>
 
       {/* Main Content */}
       <main className={`seller-main ${!isSidebarOpen ? 'sidebar-closed' : ''}`}>
@@ -61,6 +54,11 @@ const SellerLayout = () => {
           <Outlet />
         </motion.div>
       </main>
+
+      {/* Mobile overlay */}
+      {isSidebarOpen && (
+        <div className="mobile-overlay" onClick={toggleSidebar}></div>
+      )}
     </div>
   );
 };

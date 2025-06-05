@@ -16,40 +16,45 @@
   border-bottom: 1px solid #eee;
 }
 
-.profile-pic-container {
-  position: relative;
-  width: 150px;
-  height: 150px;
+.profile-info-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #212529;
 }
 
-.profile-pic {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.profile-info-header .username {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #6c757d;
 }
 
-.edit-pic-button {
-  position: absolute;
-  bottom: 5px;
-  right: 5px;
-  background: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 35px;
-  height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: capitalize;
 }
 
-.edit-pic-button:hover {
-  transform: scale(1.1);
+.role-badge.customer {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.role-badge.seller {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.role-badge.admin {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.role-badge.shipper {
+  background: #e8f5e8;
+  color: #388e3c;
 }
 
 .profile-actions {
@@ -58,7 +63,6 @@
 }
 
 .edit-button,
-.settings-button,
 .save-button {
   display: flex;
   align-items: center;
@@ -74,11 +78,6 @@
 .edit-button {
   background: #007bff;
   color: white;
-}
-
-.settings-button {
-  background: #f8f9fa;
-  color: #343a40;
 }
 
 .save-button {
@@ -122,23 +121,35 @@
   color: #212529;
 }
 
-.bio-section {
-  grid-column: 1 / -1;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 10px;
+.role-text {
+  text-transform: capitalize;
+  font-weight: 500;
 }
 
-.bio-section h3 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  color: #6c757d;
+.role-text.customer {
+  color: #1976d2;
 }
 
-.bio-section p {
-  margin: 0;
-  line-height: 1.6;
-  color: #212529;
+.role-text.seller {
+  color: #7b1fa2;
+}
+
+.role-text.admin {
+  color: #d32f2f;
+}
+
+.role-text.shipper {
+  color: #388e3c;
+}
+
+.status-text.active {
+  color: #388e3c;
+  font-weight: 500;
+}
+
+.status-text.locked {
+  color: #d32f2f;
+  font-weight: 500;
 }
 
 .edit-form {
@@ -176,6 +187,68 @@
 .form-group textarea:focus {
   outline: none;
   border-color: #007bff;
+}
+
+.readonly-field {
+  background-color: #f8f9fa !important;
+  color: #6c757d !important;
+  cursor: not-allowed !important;
+}
+
+.form-group small {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* Loading and Error States */
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-state h2 {
+  color: #6c757d;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.error-state h2 {
+  color: #dc3545;
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.error-state p {
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+.retry-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.retry-button:hover {
+  background: #0056b3;
+}
+
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

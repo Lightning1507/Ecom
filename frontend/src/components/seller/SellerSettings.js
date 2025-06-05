@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { FiUser, FiShoppingBag, FiBell, FiLock, FiCreditCard, FiTruck, FiSave } from 'react-icons/fi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FiUser, FiShoppingBag, FiBell, FiCreditCard, FiTruck, FiSave } from 'react-icons/fi';
 import './SellerSettings.css';
 
 const SellerSettings = () => {
-  // Mock data - replace with actual API calls and state management
   const [settings, setSettings] = useState({
     profile: {
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1 (555) 123-4567',
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
       avatar: null
     },
     store: {
-      name: 'John\'s Electronics',
-      description: 'Quality electronics at affordable prices',
-      address: '123 Market Street, San Francisco, CA 94105',
+      name: '',
+      description: '',
+      address: '',
       businessHours: '9:00 AM - 6:00 PM',
       category: 'Electronics'
     },
@@ -37,8 +37,66 @@ const SellerSettings = () => {
   });
 
   const [activeTab, setActiveTab] = useState('profile');
-  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(settings);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Helper function to get authentication token
+  const getAuthToken = () => {
+    try {
+      let token = localStorage.getItem('token');
+      if (token) return token;
+
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.token) return user.token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+      
+      if (!token) {
+        setError('Authentication required. Please log in as a seller.');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/dashboard/seller/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSettings(data.profile);
+        setFormData(data.profile);
+        setError(null);
+      } else {
+        setError(data.message || 'Failed to fetch profile data');
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError('Failed to load profile data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch profile data on component mount
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleInputChange = (section, field, value) => {
     setFormData(prev => ({
@@ -62,43 +120,36 @@ const SellerSettings = () => {
 
   const handleSave = async (section) => {
     try {
-      if (section === 'store') {
-        const userData = localStorage.getItem('user');
-        if (!userData) {
-          throw new Error('No authentication token found. Please log in.');
-        }
-
-        const { token } = JSON.parse(userData);
-        if (!token) {
-          throw new Error('No authentication token found. Please log in.');
-        }
-
-        const response = await fetch('http://localhost:5000/api/sellers/profile', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            store_name: formData.store.name,
-            description: formData.store.description
-          })
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to save store settings');
-        }
-
-        alert('Store settings saved successfully!');
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('No authentication token found. Please log in.');
       }
 
+      const response = await fetch('http://localhost:5000/api/dashboard/seller/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          section: section,
+          data: formData[section]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || `Failed to save ${section} settings`);
+      }
+
+      // Update local state
       setSettings(prev => ({
         ...prev,
         [section]: formData[section]
       }));
-      setIsEditing(false);
+      
+      alert(`${section.charAt(0).toUpperCase() + section.slice(1)} settings saved successfully!`);
     } catch (error) {
       console.error('Error saving settings:', error);
       alert(error.message || 'Failed to save settings. Please try again.');
@@ -131,6 +182,14 @@ const SellerSettings = () => {
             type="tel"
             value={formData.profile.phone}
             onChange={(e) => handleInputChange('profile', 'phone', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Address</label>
+          <textarea
+            value={formData.profile.address}
+            onChange={(e) => handleInputChange('profile', 'address', e.target.value)}
+            placeholder="Enter your address"
           />
         </div>
         <div className="form-group">
@@ -341,6 +400,30 @@ const SellerSettings = () => {
       </div>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="seller-settings">
+        <div className="loading-state">
+          <h2>Loading profile...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="seller-settings">
+        <div className="error-state">
+          <h2>Error loading profile</h2>
+          <p>{error}</p>
+          <button onClick={fetchProfile} className="retry-button">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="seller-settings">

@@ -82,7 +82,7 @@ const EditProduct = () => {
     } else if (e.target.name === 'visible') {
       setFormData({
         ...formData,
-        visible: e.target.value === 'true'
+        visible: e.target.checked
       });
     } else {
       setFormData({
@@ -90,6 +90,22 @@ const EditProduct = () => {
         [e.target.name]: e.target.value
       });
     }
+  };
+
+  const handleCategoryToggle = (categoryId) => {
+    const currentCategories = [...formData.categories];
+    const index = currentCategories.indexOf(categoryId);
+    
+    if (index > -1) {
+      currentCategories.splice(index, 1);
+    } else {
+      currentCategories.push(categoryId);
+    }
+    
+    setFormData({
+      ...formData,
+      categories: currentCategories
+    });
   };
   
   const handleImageChange = (e) => {
@@ -211,34 +227,51 @@ const EditProduct = () => {
         </div>
         
         <div className="form-group">
-          <label htmlFor="visible">Visibility</label>
-          <select
-            id="visible"
-            name="visible"
-            value={formData.visible.toString()}
-            onChange={handleChange}
-          >
-            <option value="true">Visible</option>
-            <option value="false">Hidden</option>
-          </select>
+          <div className="checkbox-container">
+            <input
+              type="checkbox"
+              id="visible"
+              name="visible"
+              checked={formData.visible}
+              onChange={handleChange}
+              className="checkbox-input"
+            />
+            <label htmlFor="visible" className="checkbox-label">
+              <span className="checkbox-custom"></span>
+              <span className="checkbox-text">Product is visible to customers</span>
+            </label>
+          </div>
         </div>
         
         <div className="form-group">
-          <label htmlFor="categories">Categories</label>
-          <select
-            id="categories"
-            name="categories"
-            multiple
-            value={formData.categories}
-            onChange={handleChange}
-          >
-            {categories.map(category => (
-              <option key={category.category_id} value={category.category_id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <small>Hold Ctrl (or Cmd) to select multiple categories</small>
+          <label>Categories</label>
+          <div className="categories-container">
+            <p className="categories-hint">Select one or more categories for your product:</p>
+            <div className="categories-grid">
+              {categories.map(category => (
+                <div key={category.category_id} className="category-item">
+                  <input
+                    type="checkbox"
+                    id={`category-${category.category_id}`}
+                    checked={formData.categories.includes(category.category_id)}
+                    onChange={() => handleCategoryToggle(category.category_id)}
+                    className="category-checkbox"
+                  />
+                  <label htmlFor={`category-${category.category_id}`} className="category-label">
+                    <span className="category-checkbox-custom"></span>
+                    <span className="category-name">{category.name}</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+            {formData.categories.length > 0 && (
+              <div className="selected-categories">
+                <span className="selected-count">
+                  {formData.categories.length} categor{formData.categories.length === 1 ? 'y' : 'ies'} selected
+                </span>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="form-group">
@@ -254,7 +287,9 @@ const EditProduct = () => {
           {(imagePreview || currentImage) && (
             <div className="image-preview">
               <p>Image Preview:</p>
-              <img src={imagePreview || currentImage} alt="Product preview"  />
+              <div className="image-preview-container">
+                <img src={imagePreview || currentImage} alt="Product preview" className="preview-image" />
+              </div>
             </div>
           )}
         </div>

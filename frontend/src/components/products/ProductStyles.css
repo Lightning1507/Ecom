@@ -354,3 +354,239 @@
   margin-bottom: 16px;
   border: 1px solid #feb2b2;
 }
+
+/* Enhanced Form Styles for Edit Product */
+
+/* Checkbox Styles for Visibility */
+.checkbox-container {
+  margin: 10px 0;
+}
+
+.checkbox-input {
+  display: none;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  user-select: none;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  margin-right: 10px;
+  position: relative;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.checkbox-input:checked + .checkbox-label .checkbox-custom {
+  background-color: #4285f4;
+  border-color: #4285f4;
+}
+
+.checkbox-input:checked + .checkbox-label .checkbox-custom::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-text {
+  color: #333;
+  font-weight: 500;
+}
+
+/* Fancy Categories Selector */
+.categories-container {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fafafa;
+  margin-top: 8px;
+}
+
+.categories-hint {
+  margin: 0 0 12px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+}
+
+.category-checkbox {
+  display: none;
+}
+
+.category-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  transition: all 0.3s ease;
+  width: 100%;
+  font-size: 14px;
+}
+
+.category-label:hover {
+  border-color: #4285f4;
+  background-color: #f8f9ff;
+}
+
+.category-checkbox:checked + .category-label {
+  border-color: #4285f4;
+  background-color: #4285f4;
+  color: white;
+}
+
+.category-checkbox-custom {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ddd;
+  border-radius: 3px;
+  margin-right: 8px;
+  position: relative;
+  transition: all 0.3s ease;
+  background-color: white;
+  flex-shrink: 0;
+}
+
+.category-checkbox:checked + .category-label .category-checkbox-custom {
+  background-color: white;
+  border-color: white;
+}
+
+.category-checkbox:checked + .category-label .category-checkbox-custom::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid #4285f4;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.category-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selected-categories {
+  padding: 8px 12px;
+  background-color: #e8f5e8;
+  border-radius: 4px;
+  border-left: 4px solid #4caf50;
+}
+
+.selected-count {
+  color: #2e7d32;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Fixed Size Image Preview */
+.image-preview {
+  margin-top: 15px;
+}
+
+.image-preview p {
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #333;
+}
+
+.image-preview-container {
+  width: 200px;
+  height: 200px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* Form Layout Improvements */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Responsive adjustments for Edit Product */
+@media (max-width: 768px) {
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .image-preview-container {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .categories-container {
+    padding: 12px;
+  }
+  
+  .category-label {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .checkbox-label {
+    font-size: 14px;
+  }
+}

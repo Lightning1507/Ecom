@@ -23,9 +23,8 @@ exports.getSellerDashboardStats = async (req, res) => {
       SELECT COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue
       FROM Orders o
       INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
       INNER JOIN Payments p ON o.order_id = p.order_id
-      WHERE pr.seller_id = $1 AND p.status = 'completed'
+      WHERE o.seller_id = $1 AND p.status = 'completed'
     `;
 
     // Get total orders count
@@ -222,6 +221,267 @@ exports.getSellerRecentActivity = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while fetching recent activity'
+    });
+  }
+};
+
+// Get seller profile data
+exports.getSellerProfile = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+
+    // Get user data and seller profile data
+    const profileQuery = `
+      SELECT 
+        u.user_id,
+        u.username,
+        u.full_name,
+        u.email,
+        u.phone,
+        u.address,
+        s.store_name,
+        s.description,
+        s.qr_img_path
+      FROM Users u
+      LEFT JOIN Sellers s ON u.user_id = s.seller_id
+      WHERE u.user_id = $1 AND u.role = 'seller'
+    `;
+
+    const result = await pool.query(profileQuery, [sellerId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seller not found'
+      });
+    }
+
+    const profile = result.rows[0];
+
+    res.json({
+      success: true,
+      profile: {
+        profile: {
+          name: profile.full_name || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          address: profile.address || '',
+          avatar: null
+        },
+        store: {
+          name: profile.store_name || '',
+          description: profile.description || '',
+          address: profile.address || '',
+          businessHours: '9:00 AM - 6:00 PM', // Default value, can be added to DB later
+          category: 'Electronics' // Default value, can be added to DB later
+        },
+        notifications: {
+          orderUpdates: true,
+          newMessages: true,
+          promotionalEmails: false,
+          stockAlerts: true
+        },
+        shipping: {
+          freeShippingThreshold: 50,
+          defaultShippingMethod: 'standard',
+          processingTime: '1-2 business days'
+        },
+        payment: {
+          acceptedMethods: ['credit_card', 'paypal'],
+          autoPayouts: true,
+          payoutSchedule: 'weekly'
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching seller profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching seller profile'
+    });
+  }
+};
+
+// Update seller profile data
+exports.updateSellerProfile = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const { section, data } = req.body;
+
+    if (section === 'profile') {
+      // Update user profile information
+      const updateQuery = `
+        UPDATE Users 
+        SET full_name = $1, email = $2, phone = $3, address = $4
+        WHERE user_id = $5 AND role = 'seller'
+        RETURNING *
+      `;
+
+      const result = await pool.query(updateQuery, [
+        data.name,
+        data.email,
+        data.phone,
+        data.address,
+        sellerId
+      ]);
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Seller not found'
+        });
+      }
+
+    } else if (section === 'store') {
+      // Check if seller profile exists
+      const checkQuery = 'SELECT * FROM Sellers WHERE seller_id = $1';
+      const checkResult = await pool.query(checkQuery, [sellerId]);
+
+      if (checkResult.rows.length === 0) {
+        // Create seller profile if it doesn't exist
+        const insertQuery = `
+          INSERT INTO Sellers (seller_id, store_name, description)
+          VALUES ($1, $2, $3)
+          RETURNING *
+        `;
+
+        await pool.query(insertQuery, [
+          sellerId,
+          data.name,
+          data.description
+        ]);
+      } else {
+        // Update existing seller profile
+        const updateQuery = `
+          UPDATE Sellers 
+          SET store_name = $1, description = $2
+          WHERE seller_id = $3
+          RETURNING *
+        `;
+
+        await pool.query(updateQuery, [
+          data.name,
+          data.description,
+          sellerId
+        ]);
+      }
+
+      // Also update address in Users table if provided
+      if (data.address) {
+        await pool.query(
+          'UPDATE Users SET address = $1 WHERE user_id = $2',
+          [data.address, sellerId]
+        );
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${section} updated successfully`
+    });
+
+  } catch (error) {
+    console.error('Error updating seller profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating seller profile'
+    });
+  }
+};
+
+// Get user profile data (for regular users, not sellers)
+exports.getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user data
+    const profileQuery = `
+      SELECT 
+        user_id,
+        username,
+        full_name,
+        email,
+        phone,
+        address,
+        role,
+        locked
+      FROM Users 
+      WHERE user_id = $1
+    `;
+
+    const result = await pool.query(profileQuery, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const profile = result.rows[0];
+
+    res.json({
+      success: true,
+      profile: {
+        name: profile.full_name || '',
+        username: profile.username || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        location: profile.address || '',
+        role: profile.role || '',
+        accountStatus: profile.locked ? 'Locked' : 'Active'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching user profile'
+    });
+  }
+};
+
+// Update user profile data (for regular users, not sellers)
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, email, phone, location } = req.body;
+
+    // Update user profile information (excluding username and role which shouldn't be changed)
+    const updateQuery = `
+      UPDATE Users 
+      SET full_name = $1, email = $2, phone = $3, address = $4
+      WHERE user_id = $5
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, [
+      name,
+      email,
+      phone,
+      location, // Using location as address
+      userId
+    ]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating user profile'
     });
   }
 };
