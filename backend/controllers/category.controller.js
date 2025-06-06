@@ -163,3 +163,81 @@ exports.deleteCategory = async (req, res) => {
     });
   }
 };
+
+// Get all categories with product counts for categories page
+exports.getCategoriesWithProductCounts = async (req, res) => {
+  try {
+    console.log('Fetching categories with product counts...');
+    
+    const result = await pool.query(`
+      SELECT 
+        c.category_id,
+        c.name,
+        COUNT(DISTINCT p.product_id) as product_count
+      FROM Categories c
+      LEFT JOIN Product_categories pc ON c.category_id = pc.category_id
+      LEFT JOIN Products p ON pc.product_id = p.product_id AND p.visible = true
+      GROUP BY c.category_id, c.name
+      ORDER BY c.name
+    `);
+    
+    // If no categories exist, create some default ones
+    if (result.rows.length === 0) {
+      console.log('No categories found, creating default categories...');
+      
+      const defaultCategories = [
+        'Electronics',
+        'Clothing',
+        'Books',
+        'Home & Kitchen',
+        'Sports & Outdoors',
+        'Beauty & Personal Care'
+      ];
+      
+      for (const categoryName of defaultCategories) {
+        await pool.query(
+          'INSERT INTO Categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING',
+          [categoryName]
+        );
+      }
+      
+      // Fetch categories again after inserting defaults
+      const newResult = await pool.query(`
+        SELECT 
+          c.category_id,
+          c.name,
+          COUNT(DISTINCT p.product_id) as product_count
+        FROM Categories c
+        LEFT JOIN Product_categories pc ON c.category_id = pc.category_id
+        LEFT JOIN Products p ON pc.product_id = p.product_id AND p.visible = true
+        GROUP BY c.category_id, c.name
+        ORDER BY c.name
+      `);
+      
+      result.rows = newResult.rows;
+    }
+    
+    // Transform data to match frontend expectations
+    const categories = result.rows.map(category => ({
+      id: category.category_id,
+      category_id: category.category_id,
+      name: category.name,
+      productCount: parseInt(category.product_count) || 0,
+      image: `https://via.placeholder.com/300/667eea/white?text=${encodeURIComponent(category.name)}`, // Placeholder with category name
+      featured: Math.random() > 0.5 // Random featured status for now
+    }));
+    
+    console.log('Categories with counts found:', categories);
+    
+    res.json({ 
+      categories: categories,
+      success: true
+    });
+  } catch (err) {
+    console.error('Error fetching categories with product counts:', err.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error' 
+    });
+  }
+};

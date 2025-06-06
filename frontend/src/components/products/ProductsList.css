@@ -482,13 +482,25 @@
   box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
 }
 
-.search-results-header h2 {
+.category-results-header {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(72, 187, 120, 0.2);
+}
+
+.search-results-header h2,
+.category-results-header h2 {
   margin: 0 0 0.5rem 0;
   font-size: 1.8rem;
   font-weight: 600;
 }
 
-.search-results-header p {
+.search-results-header p,
+.category-results-header p {
   margin: 0;
   font-size: 1.1rem;
   opacity: 0.9;

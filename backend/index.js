@@ -293,6 +293,7 @@ app.get('/', (req, res) => {
 
 // Category routes
 app.get('/api/categories', categoryController.getAllCategories);
+app.get('/api/categories/with-counts', categoryController.getCategoriesWithProductCounts);
 app.post('/api/categories', categoryController.createCategory);
 
 // Debug route for categories

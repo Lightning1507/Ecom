@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FiGrid, FiList, FiFilter, FiChevronDown } from 'react-icons/fi';
 import './Category.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
 const Category = () => {
   const [viewMode, setViewMode] = useState('grid');
@@ -11,52 +13,56 @@ const Category = () => {
     sortBy: 'popular',
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sample categories data - in a real app, this would come from an API
-  const categories = [
-    {
-      id: 1,
-      name: 'Electronics',
-      image: 'https://via.placeholder.com/300',
-      productCount: 150,
-      featured: true,
-    },
-    {
-      id: 2,
-      name: 'Fashion',
-      image: 'https://via.placeholder.com/300',
-      productCount: 320,
-      featured: true,
-    },
-    {
-      id: 3,
-      name: 'Home & Garden',
-      image: 'https://via.placeholder.com/300',
-      productCount: 245,
-      featured: false,
-    },
-    {
-      id: 4,
-      name: 'Sports',
-      image: 'https://via.placeholder.com/300',
-      productCount: 180,
-      featured: true,
-    },
-    {
-      id: 5,
-      name: 'Books',
-      image: 'https://via.placeholder.com/300',
-      productCount: 420,
-      featured: false,
-    },
-    {
-      id: 6,
-      name: 'Beauty',
-      image: 'https://via.placeholder.com/300',
-      productCount: 195,
-      featured: true,
-    },
-  ];
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching categories...');
+        
+        // Try direct URL first
+        const response = await fetch(`${API_BASE_URL}/api/categories/with-counts`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }).catch(async () => {
+          console.log('Direct fetch failed, trying proxy...');
+          // If direct fetch fails, try with proxy
+          return await fetch('/api/categories/with-counts', {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+        });
+
+        if (!response || !response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+
+        const data = await response.json();
+        console.log('Categories response:', data);
+
+        if (data.success && data.categories) {
+          setCategories(data.categories);
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setError(err.message || 'Failed to load categories');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
@@ -68,6 +74,26 @@ const Category = () => {
       [filterType]: value,
     });
   };
+
+  // Filter and sort categories based on selected filters
+  const filteredCategories = categories.filter(category => {
+    if (selectedFilters.priceRange !== 'all') {
+      // This would need more complex filtering based on product price ranges
+      // For now, we'll show all categories
+    }
+    return true;
+  }).sort((a, b) => {
+    switch (selectedFilters.sortBy) {
+      case 'newest':
+        return b.id - a.id; // Assuming higher ID means newer
+      case 'priceAsc':
+        return a.productCount - b.productCount;
+      case 'priceDesc':
+        return b.productCount - a.productCount;
+      default: // 'popular'
+        return b.productCount - a.productCount; // Sort by product count
+    }
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -86,6 +112,34 @@ const Category = () => {
       y: 0,
     },
   };
+
+  if (loading) {
+    return (
+      <div className="category-page">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading categories...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="category-page">
+        <div className="error-container">
+          <h2>Error Loading Categories</h2>
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="retry-button"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="category-page">
@@ -128,18 +182,6 @@ const Category = () => {
             className="filter-panel"
           >
             <div className="filter-group">
-              <label>Price Range:</label>
-              <select
-                value={selectedFilters.priceRange}
-                onChange={(e) => handleFilterChange('priceRange', e.target.value)}
-              >
-                <option value="all">All Prices</option>
-                <option value="budget">Under 1,000,000₫</option>
-                <option value="mid">1,000,000₫ - 10,000,000₫</option>
-                <option value="premium">Over 10,000,000₫</option>
-              </select>
-            </div>
-            <div className="filter-group">
               <label>Sort By:</label>
               <select
                 value={selectedFilters.sortBy}
@@ -147,40 +189,47 @@ const Category = () => {
               >
                 <option value="popular">Most Popular</option>
                 <option value="newest">Newest First</option>
-                <option value="priceAsc">Price: Low to High</option>
-                <option value="priceDesc">Price: High to Low</option>
+                <option value="priceAsc">Fewest Products</option>
+                <option value="priceDesc">Most Products</option>
               </select>
             </div>
           </motion.div>
         )}
       </div>
 
-      <motion.div
-        className={`categories-container ${viewMode}`}
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        {categories.map((category) => (
-          <motion.div
-            key={category.id}
-            className="category-card"
-            variants={itemVariants}
-            whileHover={{ scale: 1.03 }}
-          >
-            <Link to={`/category/${category.id}`} className="category-link">
-              <div className="category-image-container">
-                <img src={category.image} alt={category.name} />
-                {category.featured && <span className="featured-badge">Featured</span>}
-              </div>
-              <div className="category-info">
-                <h3>{category.name}</h3>
-                <p>{category.productCount} Products</p>
-              </div>
-            </Link>
-          </motion.div>
-        ))}
-      </motion.div>
+      {filteredCategories.length === 0 ? (
+        <div className="no-categories">
+          <h3>No categories found</h3>
+          <p>Categories will appear here once they are added to the system.</p>
+        </div>
+      ) : (
+        <motion.div
+          className={`categories-container ${viewMode}`}
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {filteredCategories.map((category) => (
+            <motion.div
+              key={category.id}
+              className="category-card"
+              variants={itemVariants}
+              whileHover={{ scale: 1.03 }}
+            >
+              <Link to={`/category/${category.id}`} className="category-link">
+                <div className="category-image-container">
+                  <img src={category.image} alt={category.name} />
+                  {category.featured && <span className="featured-badge">Featured</span>}
+                </div>
+                <div className="category-info">
+                  <h3>{category.name}</h3>
+                  <p>{category.productCount} Product{category.productCount !== 1 ? 's' : ''}</p>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 };

@@ -54,9 +54,11 @@ router.get('/debug', (req, res) => {
     message: 'Product routes are working',
     endpoints: [
       'GET /api/products',
+      'GET /api/products/search',
       'GET /api/products/:id',
       'GET /api/products/categories/all',
       'GET /api/products/filters/data',
+      'GET /api/products/debug/categories',
       'POST /api/products',
       'GET /api/products/seller/products',
       'PUT /api/products/:id',
@@ -66,5 +68,7 @@ router.get('/debug', (req, res) => {
     ]
   });
 });
+
+router.get('/debug/categories', productController.debugProductCategories);
 
 module.exports = router;

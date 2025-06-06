@@ -15,7 +15,7 @@ const ProductsList = () => {
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
-    category: categoryId || 'all',
+    category: 'all', // Will be set after fetching category name
     priceRange: 'all',
     rating: 'all',
     sortBy: 'popular',
@@ -27,6 +27,7 @@ const ProductsList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterChangeKey, setFilterChangeKey] = useState(0); // For triggering animations
+  const [categoryName, setCategoryName] = useState(null);
 
   const getCloudinaryUrl = (imagePath) => {
     if (!imagePath) {
@@ -39,6 +40,45 @@ const ProductsList = () => {
     
     return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${imagePath}`;
   };
+
+  // Fetch category name if categoryId is provided
+  useEffect(() => {
+    const fetchCategoryName = async () => {
+      if (categoryId && categoryId !== 'all') {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/categories`, {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          }).catch(async () => {
+            return await fetch('/api/categories', {
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+          });
+
+          if (response && response.ok) {
+            const data = await response.json();
+            const category = data.categories?.find(cat => cat.category_id === parseInt(categoryId));
+            if (category) {
+              setCategoryName(category.name);
+              setFilters(prev => ({
+                ...prev,
+                category: category.name.toLowerCase()
+              }));
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching category:', err);
+        }
+      }
+    };
+
+    fetchCategoryName();
+  }, [categoryId]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -206,6 +246,23 @@ const ProductsList = () => {
 
   const filteredAndSortedProducts = sortProducts(filterProducts(products));
 
+  // Debug: Log current filtering state
+  useEffect(() => {
+    if (categoryId && products.length > 0) {
+      console.log('=== CATEGORY FILTERING DEBUG ===');
+      console.log('Category ID from URL:', categoryId);
+      console.log('Category Name:', categoryName);
+      console.log('Current filter.category:', filters.category);
+      console.log('Total products:', products.length);
+      console.log('Filtered products:', filteredAndSortedProducts.length);
+      console.log('Sample product categories:', products.slice(0, 3).map(p => ({
+        name: p.name,
+        category: p.category,
+        categories: p.categories
+      })));
+    }
+  }, [categoryId, categoryName, filters.category, products, filteredAndSortedProducts]);
+
   if (loading) {
     return (
       <div className="products-loading">
@@ -254,6 +311,14 @@ const ProductsList = () => {
         </div>
       )}
 
+      {/* Show category header if viewing a specific category */}
+      {categoryName && !searchQuery && (
+        <div className="category-results-header">
+          <h2>{categoryName}</h2>
+          <p>{filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} in this category</p>
+        </div>
+      )}
+
       <ProductFilter
         filters={filters}
         setFilters={setFilters}
@@ -268,7 +333,7 @@ const ProductsList = () => {
           animate={{ opacity: 1, y: 0 }}
           className="results-count"
         >
-          {!searchQuery && `${filteredAndSortedProducts.length} product${filteredAndSortedProducts.length !== 1 ? 's' : ''} found`}
+          {!searchQuery && !categoryName && `${filteredAndSortedProducts.length} product${filteredAndSortedProducts.length !== 1 ? 's' : ''} found`}
         </motion.p>
       </div>
 

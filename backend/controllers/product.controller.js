@@ -652,3 +652,50 @@ exports.searchProducts = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Debug function to check products and categories
+exports.debugProductCategories = async (req, res) => {
+  try {
+    console.log('Debug: Checking products and categories...');
+    
+    // Get all products with their categories
+    const result = await pool.query(`
+      SELECT 
+        p.product_id,
+        p.name as product_name,
+        p.visible,
+        c.category_id,
+        c.name as category_name
+      FROM Products p
+      LEFT JOIN Product_categories pc ON p.product_id = pc.product_id
+      LEFT JOIN Categories c ON pc.category_id = c.category_id
+      ORDER BY p.product_id
+    `);
+    
+    // Get products without any categories
+    const orphanProducts = await pool.query(`
+      SELECT p.product_id, p.name
+      FROM Products p
+      LEFT JOIN Product_categories pc ON p.product_id = pc.product_id
+      WHERE pc.product_id IS NULL AND p.visible = true
+    `);
+    
+    // Get all categories
+    const categories = await pool.query('SELECT * FROM Categories ORDER BY name');
+    
+    res.json({
+      message: 'Debug information',
+      products_with_categories: result.rows,
+      orphan_products: orphanProducts.rows,
+      all_categories: categories.rows,
+      stats: {
+        total_products: result.rows.length,
+        orphan_products_count: orphanProducts.rows.length,
+        total_categories: categories.rows.length
+      }
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ message: 'Debug error', error: error.message });
+  }
+};
