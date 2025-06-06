@@ -9,6 +9,7 @@ const Header = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = () => {
     logout();
@@ -17,6 +18,23 @@ const Header = () => {
 
   const toggleNotifications = () => {
     setIsNotificationsOpen(!isNotificationsOpen);
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch(e);
+    }
   };
 
   return (
@@ -31,10 +49,16 @@ const Header = () => {
 
         {/* Search Bar */}
         <div className="search-container">
-          <div className="search-bar">
-            <FiSearch className="search-icon" />
-            <input type="text" placeholder="Search products..." />
-          </div>
+          <form onSubmit={handleSearch} className="search-bar">
+            <FiSearch className="search-icon" onClick={handleSearch} />
+            <input 
+              type="text" 
+              placeholder="Search products..." 
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+              onKeyPress={handleKeyPress}
+            />
+          </form>
         </div>
 
         {/* Navigation Links */}

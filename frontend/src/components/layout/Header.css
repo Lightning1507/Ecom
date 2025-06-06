@@ -106,6 +106,12 @@
 .search-icon {
   color: var(--color-gray-500);
   margin-right: var(--spacing-md);
+  cursor: pointer;
+  transition: var(--transition-default);
+}
+
+.search-icon:hover {
+  color: var(--color-primary);
 }
 
 .search-bar input {

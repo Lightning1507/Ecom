@@ -566,3 +566,89 @@ exports.toggleProductFeatured = async (req, res) => {
     message: 'Featured status is not supported in the current database schema'
   });
 };
+
+// Search products
+exports.searchProducts = async (req, res) => {
+  try {
+    const { q: query } = req.query;
+    
+    if (!query || query.trim() === '') {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+    
+    const searchTerm = `%${query.trim().toLowerCase()}%`;
+    
+    // Search products by name, description, and category
+    const result = await pool.query(`
+      SELECT DISTINCT
+        p.*,
+        s.store_name as brand,
+        COALESCE(p.visible, true) as visible_status
+      FROM Products p
+      LEFT JOIN Sellers s ON p.seller_id = s.seller_id
+      LEFT JOIN Product_categories pc ON p.product_id = pc.product_id
+      LEFT JOIN Categories c ON pc.category_id = c.category_id
+      WHERE p.visible = true 
+        AND (
+          LOWER(p.name) LIKE $1 
+          OR LOWER(p.description) LIKE $1 
+          OR LOWER(s.store_name) LIKE $1
+          OR LOWER(c.name) LIKE $1
+        )
+      ORDER BY 
+        CASE 
+          WHEN LOWER(p.name) LIKE $1 THEN 1
+          WHEN LOWER(p.description) LIKE $1 THEN 2
+          WHEN LOWER(s.store_name) LIKE $1 THEN 3
+          WHEN LOWER(c.name) LIKE $1 THEN 4
+          ELSE 5
+        END,
+        p.product_id DESC
+    `, [searchTerm]);
+    
+    // Fetch categories for all products in one query
+    const productIds = result.rows.map(product => product.product_id);
+    let categoriesMap = {};
+    if (productIds.length > 0) {
+      const categoriesResult = await pool.query(
+        `SELECT pc.product_id, c.category_id, c.name FROM Product_categories pc
+         JOIN Categories c ON pc.category_id = c.category_id
+         WHERE pc.product_id = ANY($1)`,
+        [productIds]
+      );
+      // Map product_id to array of categories
+      categoriesResult.rows.forEach(row => {
+        if (!categoriesMap[row.product_id]) categoriesMap[row.product_id] = [];
+        categoriesMap[row.product_id].push({ category_id: row.category_id, name: row.name });
+      });
+    }
+    
+    // Transform the data to match the frontend's expected format
+    const products = result.rows.map(product => {
+      const categories = categoriesMap[product.product_id] || [];
+      return {
+        product_id: product.product_id,
+        id: product.product_id, // for compatibility
+        name: product.name,
+        description: product.description,
+        price: parseFloat(product.price),
+        stock: parseInt(product.stock),
+        img_path: product.img_path,
+        brand: product.brand || 'Unknown Brand', // store name as brand
+        categories: categories, // array of {category_id, name}
+        category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase
+        rating: 4.5, // default rating since we don't have reviews implemented yet
+        visible: product.visible_status
+      };
+    });
+    
+    res.json({ 
+      products,
+      query: query,
+      count: products.length 
+    });
+  } catch (error) {
+    console.error('Error searching products:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

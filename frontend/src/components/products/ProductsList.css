@@ -470,4 +470,26 @@
     padding: 1.5rem 0.75rem;
     min-height: 150px;
   }
+}
+
+.search-results-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+}
+
+.search-results-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.search-results-header p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
 } 

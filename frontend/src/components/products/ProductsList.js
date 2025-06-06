@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { FiStar, FiShoppingCart } from 'react-icons/fi';
 import ProductFilter from './ProductFilter';
 import './ProductsList.css';
@@ -10,6 +10,9 @@ const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
 
 const ProductsList = () => {
   const { id: categoryId } = useParams();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
+  
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     category: categoryId || 'all',
@@ -117,10 +120,27 @@ const ProductsList = () => {
   // Trigger animation when filters change
   useEffect(() => {
     setFilterChangeKey(prev => prev + 1);
-  }, [filters]);
+  }, [filters, searchQuery]);
 
   const filterProducts = (products) => {
     return products.filter(product => {
+      // Search filter - check name, description, brand, and category
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          product.name.toLowerCase().includes(query) ||
+          product.description.toLowerCase().includes(query) ||
+          product.brand.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query) ||
+          (product.categories && product.categories.some(cat => 
+            cat.name.toLowerCase().includes(query)
+          ));
+        
+        if (!matchesSearch) {
+          return false;
+        }
+      }
+
       // Category filter - more flexible matching
       if (filters.category !== 'all') {
         const productCategories = product.categories || [];
@@ -226,6 +246,14 @@ const ProductsList = () => {
 
   return (
     <div className="products-page">
+      {/* Show search query if present */}
+      {searchQuery && (
+        <div className="search-results-header">
+          <h2>Search Results for "{searchQuery}"</h2>
+          <p>{filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} found</p>
+        </div>
+      )}
+
       <ProductFilter
         filters={filters}
         setFilters={setFilters}
@@ -240,7 +268,7 @@ const ProductsList = () => {
           animate={{ opacity: 1, y: 0 }}
           className="results-count"
         >
-          {filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} found
+          {!searchQuery && `${filteredAndSortedProducts.length} product${filteredAndSortedProducts.length !== 1 ? 's' : ''} found`}
         </motion.p>
       </div>
 
@@ -321,20 +349,35 @@ const ProductsList = () => {
           animate={{ opacity: 1, scale: 1 }}
           className="no-results"
         >
-          <h3>No products match your filters</h3>
-          <p>Try adjusting your search criteria</p>
+          <h3>
+            {searchQuery 
+              ? `No products found matching "${searchQuery}"` 
+              : 'No products match your filters'
+            }
+          </h3>
+          <p>
+            {searchQuery 
+              ? 'Try adjusting your search terms or browse our categories' 
+              : 'Try adjusting your search criteria'
+            }
+          </p>
           <button 
-            onClick={() => setFilters({
-              category: 'all',
-              priceRange: 'all',
-              rating: 'all',
-              sortBy: 'popular',
-              brand: 'all',
-              availability: 'all'
-            })}
+            onClick={() => {
+              setFilters({
+                category: 'all',
+                priceRange: 'all',
+                rating: 'all',
+                sortBy: 'popular',
+                brand: 'all',
+                availability: 'all'
+              });
+              if (searchQuery) {
+                window.location.href = '/products';
+              }
+            }}
             className="clear-filters-btn"
           >
-            Clear All Filters
+            {searchQuery ? 'View All Products' : 'Clear All Filters'}
           </button>
         </motion.div>
       )}
