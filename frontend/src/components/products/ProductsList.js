@@ -23,6 +23,7 @@ const ProductsList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filterChangeKey, setFilterChangeKey] = useState(0); // For triggering animations
 
   const getCloudinaryUrl = (imagePath) => {
     if (!imagePath) {
@@ -95,7 +96,10 @@ const ProductsList = () => {
           price: parseFloat(product.price) || 0,
           img_path: getCloudinaryUrl(product.img_path),
           stock: parseInt(product.stock, 10) || 0,
-          rating: product.rating || 4.5
+          rating: product.rating || 4.5,
+          category: product.category || 'uncategorized', // Include category from API
+          brand: product.brand || 'Unknown Brand', // Include brand from API
+          categories: product.categories || [] // Include full categories array
         }));
 
         setProducts(transformedProducts);
@@ -110,38 +114,54 @@ const ProductsList = () => {
     fetchProducts();
   }, []);
 
+  // Trigger animation when filters change
+  useEffect(() => {
+    setFilterChangeKey(prev => prev + 1);
+  }, [filters]);
+
   const filterProducts = (products) => {
     return products.filter(product => {
-      // Category filter
-      if (filters.category !== 'all' && product.category !== filters.category) {
-        return false;
+      // Category filter - more flexible matching
+      if (filters.category !== 'all') {
+        const productCategories = product.categories || [];
+        const hasMatchingCategory = productCategories.some(cat => 
+          cat.name.toLowerCase() === filters.category.toLowerCase()
+        ) || product.category.toLowerCase() === filters.category.toLowerCase();
+        
+        if (!hasMatchingCategory) {
+          return false;
+        }
       }
 
       // Price range filter
       if (filters.priceRange !== 'all') {
-        const [min, max] = filters.priceRange.split('-').map(Number);
-        if (max) {
-          if (product.price < min || product.price > max) return false;
-        } else {
+        if (filters.priceRange.endsWith('+')) {
+          // Handle "50000000+" format
+          const min = parseInt(filters.priceRange.replace('+', ''));
           if (product.price < min) return false;
+        } else {
+          // Handle "min-max" format
+          const [min, max] = filters.priceRange.split('-').map(Number);
+          if (max && (product.price < min || product.price > max)) return false;
+          if (!max && product.price < min) return false;
         }
       }
 
       // Rating filter
       if (filters.rating !== 'all') {
-        const minRating = parseInt(filters.rating);
+        const minRating = parseInt(filters.rating.replace('+', ''));
         if (product.rating < minRating) return false;
       }
 
-      // Brand filter
+      // Brand filter - exact match
       if (filters.brand !== 'all' && product.brand !== filters.brand) {
         return false;
       }
 
       // Availability filter
       if (filters.availability !== 'all') {
-        if (filters.availability === 'in-stock' && !product.stock) return false;
-        if (filters.availability === 'out-of-stock' && product.stock) return false;
+        if (filters.availability === 'in-stock' && product.stock <= 0) return false;
+        if (filters.availability === 'out-of-stock' && product.stock > 0) return false;
       }
 
       return true;
@@ -213,31 +233,60 @@ const ProductsList = () => {
         onToggle={() => setIsFilterOpen(!isFilterOpen)}
       />
 
-      <AnimatePresence>
-        <motion.div
-          className="products-grid"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+      <div className="products-results">
+        <motion.p 
+          key={`results-${filterChangeKey}`}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="results-count"
         >
-          {filteredAndSortedProducts.map(product => (
+          {filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} found
+        </motion.p>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={filterChangeKey}
+          className="products-grid"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ 
+            duration: 0.3,
+            staggerChildren: 0.05
+          }}
+        >
+          {filteredAndSortedProducts.map((product, index) => (
             <motion.div
               key={product.id}
               className="product-card"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -20 }}
+              transition={{ 
+                duration: 0.3,
+                delay: index * 0.05,
+                ease: "easeOut"
+              }}
+              whileHover={{ 
+                y: -5,
+                scale: 1.02,
+                transition: { duration: 0.2 }
+              }}
               layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              whileHover={{ y: -5 }}
             >
               <div className="product-image">
                 <img src={product.img_path} alt={product.name} />
-                {!product.stock && (
+                {product.stock <= 0 && (
                   <div className="out-of-stock-badge">Out of Stock</div>
+                )}
+                {product.stock > 0 && product.stock <= 5 && (
+                  <div className="low-stock-badge">Only {product.stock} left</div>
                 )}
               </div>
               <div className="product-info">
                 <h3>{product.name}</h3>
+                <p className="product-brand">{product.brand}</p>
                 <div className="product-details">
                   <span className="price">
                     {new Intl.NumberFormat('vi-VN', {
@@ -254,16 +303,41 @@ const ProductsList = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="add-to-cart-button"
-                  disabled={!product.stock}
+                  className={`add-to-cart-button ${product.stock <= 0 ? 'disabled' : ''}`}
+                  disabled={product.stock <= 0}
                 >
-                  <FiShoppingCart /> Add to Cart
+                  <FiShoppingCart /> 
+                  {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
                 </motion.button>
               </div>
             </motion.div>
           ))}
         </motion.div>
       </AnimatePresence>
+
+      {filteredAndSortedProducts.length === 0 && !loading && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="no-results"
+        >
+          <h3>No products match your filters</h3>
+          <p>Try adjusting your search criteria</p>
+          <button 
+            onClick={() => setFilters({
+              category: 'all',
+              priceRange: 'all',
+              rating: 'all',
+              sortBy: 'popular',
+              brand: 'all',
+              availability: 'all'
+            })}
+            className="clear-filters-btn"
+          >
+            Clear All Filters
+          </button>
+        </motion.div>
+      )}
     </div>
   );
 };

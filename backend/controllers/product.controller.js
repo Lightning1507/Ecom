@@ -118,8 +118,55 @@ exports.createProduct = async (req, res) => {
 // Get all products
 exports.getAllProducts = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products');
-    res.json({ products: result.rows });
+    // Get all products with seller information
+    const result = await pool.query(`
+      SELECT 
+        p.*,
+        s.store_name as brand,
+        COALESCE(p.visible, true) as visible_status
+      FROM Products p
+      LEFT JOIN Sellers s ON p.seller_id = s.seller_id
+      WHERE p.visible = true
+      ORDER BY p.product_id DESC
+    `);
+    
+    // Fetch categories for all products in one query
+    const productIds = result.rows.map(product => product.product_id);
+    let categoriesMap = {};
+    if (productIds.length > 0) {
+      const categoriesResult = await pool.query(
+        `SELECT pc.product_id, c.category_id, c.name FROM Product_categories pc
+         JOIN Categories c ON pc.category_id = c.category_id
+         WHERE pc.product_id = ANY($1)`,
+        [productIds]
+      );
+      // Map product_id to array of categories
+      categoriesResult.rows.forEach(row => {
+        if (!categoriesMap[row.product_id]) categoriesMap[row.product_id] = [];
+        categoriesMap[row.product_id].push({ category_id: row.category_id, name: row.name });
+      });
+    }
+    
+    // Transform the data to match the frontend's expected format
+    const products = result.rows.map(product => {
+      const categories = categoriesMap[product.product_id] || [];
+      return {
+        product_id: product.product_id,
+        id: product.product_id, // for compatibility
+        name: product.name,
+        description: product.description,
+        price: parseFloat(product.price),
+        stock: parseInt(product.stock),
+        img_path: product.img_path,
+        brand: product.brand || 'Unknown Brand', // store name as brand
+        categories: categories, // array of {category_id, name}
+        category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase
+        rating: 4.5, // default rating since we don't have reviews implemented yet
+        visible: product.visible_status
+      };
+    });
+    
+    res.json({ products });
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Server error' });
@@ -429,6 +476,46 @@ exports.getAllCategories = async (req, res) => {
     res.json({ categories: result.rows });
   } catch (err) {
     console.error(err.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Get filter data - categories, brands (store names), price ranges
+exports.getFilterData = async (req, res) => {
+  try {
+    // Get categories
+    const categoriesResult = await pool.query('SELECT * FROM Categories ORDER BY name');
+    
+    // Get brands (store names) from sellers who have products
+    const brandsResult = await pool.query(`
+      SELECT DISTINCT s.store_name 
+      FROM Sellers s 
+      INNER JOIN Products p ON s.seller_id = p.seller_id 
+      WHERE p.visible = true 
+      ORDER BY s.store_name
+    `);
+    
+    // Get price range data
+    const priceRangeResult = await pool.query(`
+      SELECT 
+        MIN(price) as min_price,
+        MAX(price) as max_price
+      FROM Products 
+      WHERE visible = true AND price > 0
+    `);
+    
+    const filterData = {
+      categories: categoriesResult.rows,
+      brands: brandsResult.rows.map(row => ({ name: row.store_name, value: row.store_name })),
+      priceRange: {
+        min: priceRangeResult.rows[0]?.min_price || 0,
+        max: priceRangeResult.rows[0]?.max_price || 0
+      }
+    };
+    
+    res.json(filterData);
+  } catch (err) {
+    console.error('Error fetching filter data:', err.message);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

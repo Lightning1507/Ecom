@@ -35,6 +35,7 @@ const upload = multer({
 router.get('/', productController.getAllProducts);
 router.get('/:id', productController.getProductById);
 router.get('/categories/all', productController.getAllCategories);
+router.get('/filters/data', productController.getFilterData);
 
 // Protected routes (seller only)
 router.post('/', auth, sellerAuth, upload.single('image'), productController.createProduct);
@@ -54,6 +55,7 @@ router.get('/debug', (req, res) => {
       'GET /api/products',
       'GET /api/products/:id',
       'GET /api/products/categories/all',
+      'GET /api/products/filters/data',
       'POST /api/products',
       'GET /api/products/seller/products',
       'PUT /api/products/:id',
