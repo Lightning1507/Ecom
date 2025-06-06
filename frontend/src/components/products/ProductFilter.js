@@ -135,6 +135,7 @@ const ProductFilter = ({ filters, setFilters, isOpen, onToggle }) => {
           exit={{ opacity: 0, y: -10 }}
           className="filter-panel"
         >
+          {/* First Row Filters */}
           <div className="filter-section">
             <h3>Categories</h3>
             <select
@@ -220,6 +221,7 @@ const ProductFilter = ({ filters, setFilters, isOpen, onToggle }) => {
             </select>
           </div>
 
+          {/* Second Row Filters */}
           <div className="filter-section">
             <h3>Availability</h3>
             <select
