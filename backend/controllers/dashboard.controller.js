@@ -505,4 +505,257 @@ function formatTimeAgo(date) {
   } else {
     return new Date(date).toLocaleDateString();
   }
-} 
+}
+
+// Get seller analytics data
+exports.getSellerAnalytics = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const { timeRange = '6m' } = req.query;
+
+    // Define time range intervals
+    const timeRanges = {
+      '1m': { months: 1, label: 'month' },
+      '3m': { months: 3, label: 'months' },
+      '6m': { months: 6, label: 'months' },
+      '1y': { months: 12, label: 'year' }
+    };
+
+    const range = timeRanges[timeRange] || timeRanges['6m'];
+
+    // Check if seller exists
+    const sellerResult = await pool.query(
+      'SELECT seller_id, store_name FROM Sellers WHERE seller_id = $1',
+      [sellerId]
+    );
+
+    if (sellerResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seller profile not found'
+      });
+    }
+
+    // 1. Revenue data over time
+    const revenueDataQuery = `
+      SELECT 
+        TO_CHAR(DATE_TRUNC('month', o.order_date), 'Mon') as month,
+        COALESCE(SUM(oi.quantity * oi.price), 0) as revenue
+      FROM Orders o
+      INNER JOIN Order_items oi ON o.order_id = oi.order_id
+      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      INNER JOIN Payments p ON o.order_id = p.order_id
+      WHERE pr.seller_id = $1 
+        AND p.status = 'completed'
+        AND o.order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '${range.months - 1} months')
+      GROUP BY DATE_TRUNC('month', o.order_date)
+      ORDER BY DATE_TRUNC('month', o.order_date)
+    `;
+
+    // 2. Orders data over time
+    const orderDataQuery = `
+      SELECT 
+        TO_CHAR(DATE_TRUNC('month', o.order_date), 'Mon') as month,
+        COUNT(DISTINCT o.order_id) as orders
+      FROM Orders o
+      INNER JOIN Order_items oi ON o.order_id = oi.order_id
+      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      WHERE pr.seller_id = $1
+        AND o.order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '${range.months - 1} months')
+      GROUP BY DATE_TRUNC('month', o.order_date)
+      ORDER BY DATE_TRUNC('month', o.order_date)
+    `;
+
+    // 3. Category distribution data
+    const categoryDataQuery = `
+      SELECT 
+        c.name,
+        COUNT(DISTINCT o.order_id) as value
+      FROM Orders o
+      INNER JOIN Order_items oi ON o.order_id = oi.order_id
+      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      INNER JOIN Product_categories pc ON pr.product_id = pc.product_id
+      INNER JOIN Categories c ON pc.category_id = c.category_id
+      WHERE pr.seller_id = $1
+        AND o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months'
+      GROUP BY c.category_id, c.name
+      ORDER BY value DESC
+      LIMIT 5
+    `;
+
+    // 4. Top products data
+    const topProductsQuery = `
+      SELECT 
+        pr.name,
+        SUM(oi.quantity) as sales,
+        SUM(oi.quantity * oi.price) as revenue
+      FROM Orders o
+      INNER JOIN Order_items oi ON o.order_id = oi.order_id
+      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      INNER JOIN Payments p ON o.order_id = p.order_id
+      WHERE pr.seller_id = $1 
+        AND p.status = 'completed'
+        AND o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months'
+      GROUP BY pr.product_id, pr.name
+      ORDER BY revenue DESC
+      LIMIT 5
+    `;
+
+    // 5. Summary metrics
+    const summaryQuery = `
+      SELECT 
+        COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue,
+        COUNT(DISTINCT o.order_id) as total_orders,
+        COUNT(DISTINCT o.user_id) as total_customers,
+        COALESCE(AVG(oi.quantity * oi.price), 0) as avg_order_value
+      FROM Orders o
+      INNER JOIN Order_items oi ON o.order_id = oi.order_id
+      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      INNER JOIN Payments p ON o.order_id = p.order_id
+      WHERE pr.seller_id = $1 
+        AND p.status = 'completed'
+        AND o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months'
+    `;
+
+    // 6. Growth calculation (current vs previous period)
+    const growthQuery = `
+      SELECT 
+        COALESCE(SUM(CASE 
+          WHEN o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months' 
+          THEN oi.quantity * oi.price 
+          ELSE 0 
+        END), 0) as current_period_revenue,
+        COALESCE(SUM(CASE 
+          WHEN o.order_date >= CURRENT_DATE - INTERVAL '${range.months * 2} months' 
+            AND o.order_date < CURRENT_DATE - INTERVAL '${range.months} months'
+          THEN oi.quantity * oi.price 
+          ELSE 0 
+        END), 0) as previous_period_revenue,
+        COUNT(DISTINCT CASE 
+          WHEN o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months' 
+          THEN o.order_id 
+        END) as current_period_orders,
+        COUNT(DISTINCT CASE 
+          WHEN o.order_date >= CURRENT_DATE - INTERVAL '${range.months * 2} months' 
+            AND o.order_date < CURRENT_DATE - INTERVAL '${range.months} months'
+          THEN o.order_id 
+        END) as previous_period_orders,
+        COUNT(DISTINCT CASE 
+          WHEN o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months' 
+          THEN o.user_id 
+        END) as current_period_customers,
+        COUNT(DISTINCT CASE 
+          WHEN o.order_date >= CURRENT_DATE - INTERVAL '${range.months * 2} months' 
+            AND o.order_date < CURRENT_DATE - INTERVAL '${range.months} months'
+          THEN o.user_id 
+        END) as previous_period_customers
+      FROM Orders o
+      INNER JOIN Order_items oi ON o.order_id = oi.order_id
+      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      INNER JOIN Payments p ON o.order_id = p.order_id
+      WHERE pr.seller_id = $1 AND p.status = 'completed'
+    `;
+
+    // Execute all queries
+    const [
+      revenueDataResult,
+      orderDataResult, 
+      categoryDataResult,
+      topProductsResult,
+      summaryResult,
+      growthResult
+    ] = await Promise.all([
+      pool.query(revenueDataQuery, [sellerId]),
+      pool.query(orderDataQuery, [sellerId]),
+      pool.query(categoryDataQuery, [sellerId]),
+      pool.query(topProductsQuery, [sellerId]),
+      pool.query(summaryQuery, [sellerId]),
+      pool.query(growthQuery, [sellerId])
+    ]);
+
+    // Process growth calculations
+    const growth = growthResult.rows[0];
+    const currentRevenue = parseFloat(growth.current_period_revenue) || 0;
+    const previousRevenue = parseFloat(growth.previous_period_revenue) || 0;
+    const currentOrders = parseInt(growth.current_period_orders) || 0;
+    const previousOrders = parseInt(growth.previous_period_orders) || 0;
+    const currentCustomers = parseInt(growth.current_period_customers) || 0;
+    const previousCustomers = parseInt(growth.previous_period_customers) || 0;
+
+    const revenueGrowth = previousRevenue > 0 ? 
+      ((currentRevenue - previousRevenue) / previousRevenue * 100) : 0;
+    const ordersGrowth = previousOrders > 0 ? 
+      ((currentOrders - previousOrders) / previousOrders * 100) : 0;
+    const customersGrowth = previousCustomers > 0 ? 
+      ((currentCustomers - previousCustomers) / previousCustomers * 100) : 0;
+
+    // Format response data
+    const summary = summaryResult.rows[0];
+    const avgOrderValue = parseFloat(summary.avg_order_value) || 0;
+    const previousAvgOrderValue = previousOrders > 0 ? previousRevenue / previousOrders : 0;
+    const avgOrderValueGrowth = previousAvgOrderValue > 0 ? 
+      ((avgOrderValue - previousAvgOrderValue) / previousAvgOrderValue * 100) : 0;
+
+    // Fill missing months with zero values
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentDate = new Date();
+    const months = [];
+    
+    for (let i = range.months - 1; i >= 0; i--) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      months.push(monthNames[date.getMonth()]);
+    }
+
+    const revenueData = months.map(month => {
+      const data = revenueDataResult.rows.find(row => row.month === month);
+      return {
+        month,
+        revenue: data ? parseFloat(data.revenue) : 0
+      };
+    });
+
+    const orderData = months.map(month => {
+      const data = orderDataResult.rows.find(row => row.month === month);
+      return {
+        month,
+        orders: data ? parseInt(data.orders) : 0
+      };
+    });
+
+    res.json({
+      success: true,
+      analytics: {
+        revenueData,
+        orderData,
+        categoryData: categoryDataResult.rows.map(row => ({
+          name: row.name,
+          value: parseInt(row.value)
+        })),
+        topProducts: topProductsResult.rows.map(row => ({
+          name: row.name,
+          sales: parseInt(row.sales),
+          revenue: parseFloat(row.revenue)
+        })),
+        summary: {
+          totalRevenue: parseFloat(summary.total_revenue),
+          totalOrders: parseInt(summary.total_orders),
+          totalCustomers: parseInt(summary.total_customers),
+          averageOrderValue: avgOrderValue,
+          revenueGrowth: revenueGrowth.toFixed(1),
+          ordersGrowth: ordersGrowth.toFixed(1),
+          customersGrowth: customersGrowth.toFixed(1),
+          avgOrderValueGrowth: avgOrderValueGrowth.toFixed(1)
+        },
+        timeRange
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching seller analytics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics data',
+      error: error.message
+    });
+  }
+}; 

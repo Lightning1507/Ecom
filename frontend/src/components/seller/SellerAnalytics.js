@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   BarChart,
   Bar,
@@ -14,53 +14,141 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { FiTrendingUp, FiDollarSign, FiShoppingBag, FiUsers, FiCalendar } from 'react-icons/fi';
+import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiShoppingBag, FiUsers, FiCalendar, FiLoader } from 'react-icons/fi';
 import './SellerAnalytics.css';
-
-// Mock data - replace with actual API calls in production
-const mockData = {
-  revenueData: [
-    { month: 'Jan', revenue: 5200 },
-    { month: 'Feb', revenue: 4800 },
-    { month: 'Mar', revenue: 6100 },
-    { month: 'Apr', revenue: 5900 },
-    { month: 'May', revenue: 7200 },
-    { month: 'Jun', revenue: 6800 }
-  ],
-  orderData: [
-    { month: 'Jan', orders: 42 },
-    { month: 'Feb', orders: 38 },
-    { month: 'Mar', orders: 51 },
-    { month: 'Apr', orders: 48 },
-    { month: 'May', orders: 61 },
-    { month: 'Jun', orders: 57 }
-  ],
-  categoryData: [
-    { name: 'Electronics', value: 35 },
-    { name: 'Clothing', value: 25 },
-    { name: 'Books', value: 20 },
-    { name: 'Home', value: 15 },
-    { name: 'Other', value: 5 }
-  ],
-  topProducts: [
-    { name: 'Product A', sales: 125, revenue: 3750 },
-    { name: 'Product B', sales: 98, revenue: 2940 },
-    { name: 'Product C', sales: 84, revenue: 2520 },
-    { name: 'Product D', sales: 76, revenue: 2280 },
-    { name: 'Product E', sales: 65, revenue: 1950 }
-  ]
-};
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const SellerAnalytics = () => {
   const [timeRange, setTimeRange] = useState('6m');
-  
-  // Calculate summary metrics
-  const totalRevenue = mockData.revenueData.reduce((sum, item) => sum + item.revenue, 0);
-  const totalOrders = mockData.orderData.reduce((sum, item) => sum + item.orders, 0);
-  const averageOrderValue = totalRevenue / totalOrders;
-  const topSellingProduct = mockData.topProducts[0];
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Helper function to get authentication token
+  const getAuthToken = useCallback(() => {
+    try {
+      let token = localStorage.getItem('token');
+      if (token) return token;
+
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.token) return user.token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  }, []);
+
+  // Fetch analytics data
+  const fetchAnalyticsData = useCallback(async (selectedTimeRange) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`http://localhost:5000/api/dashboard/seller/analytics?timeRange=${selectedTimeRange}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch analytics data');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setAnalyticsData(data.analytics);
+      } else {
+        throw new Error(data.message || 'Failed to fetch analytics data');
+      }
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [getAuthToken]);
+
+  // Fetch data when component mounts or time range changes
+  useEffect(() => {
+    fetchAnalyticsData(timeRange);
+  }, [timeRange, fetchAnalyticsData]);
+
+  // Handle time range change
+  const handleTimeRangeChange = useCallback((e) => {
+    const newTimeRange = e.target.value;
+    setTimeRange(newTimeRange);
+  }, []);
+
+  // Format growth percentage with appropriate icon and color
+  const formatGrowth = (growth) => {
+    const value = parseFloat(growth);
+    const isPositive = value >= 0;
+    const icon = isPositive ? <FiTrendingUp /> : <FiTrendingDown />;
+    const className = isPositive ? 'positive' : 'negative';
+    return (
+      <p className={`card-trend ${className}`}>
+        {icon} {isPositive ? '+' : ''}{value}%
+      </p>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="analytics-dashboard">
+        <div className="analytics-header">
+          <h1>Analytics Dashboard</h1>
+        </div>
+        <div className="loading-container">
+          <FiLoader className="loading-spinner" />
+          <p>Loading analytics data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="analytics-dashboard">
+        <div className="analytics-header">
+          <h1>Analytics Dashboard</h1>
+        </div>
+        <div className="error-container">
+          <p>Error loading analytics data: {error}</p>
+          <button onClick={() => fetchAnalyticsData(timeRange)} className="retry-button">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analyticsData) {
+    return (
+      <div className="analytics-dashboard">
+        <div className="analytics-header">
+          <h1>Analytics Dashboard</h1>
+        </div>
+        <div className="no-data-container">
+          <p>No analytics data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { revenueData, orderData, categoryData, topProducts, summary } = analyticsData;
 
   return (
     <div className="analytics-dashboard">
@@ -68,7 +156,7 @@ const SellerAnalytics = () => {
         <h1>Analytics Dashboard</h1>
         <div className="time-range-selector">
           <FiCalendar />
-          <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+          <select value={timeRange} onChange={handleTimeRangeChange}>
             <option value="1m">Last Month</option>
             <option value="3m">Last 3 Months</option>
             <option value="6m">Last 6 Months</option>
@@ -85,10 +173,8 @@ const SellerAnalytics = () => {
           </div>
           <div className="card-content">
             <h3>Total Revenue</h3>
-            <p className="card-value">${totalRevenue.toLocaleString()}</p>
-            <p className="card-trend positive">
-              <FiTrendingUp /> +15.3%
-            </p>
+            <p className="card-value">${summary.totalRevenue.toLocaleString()}</p>
+            {formatGrowth(summary.revenueGrowth)}
           </div>
         </div>
 
@@ -98,10 +184,8 @@ const SellerAnalytics = () => {
           </div>
           <div className="card-content">
             <h3>Total Orders</h3>
-            <p className="card-value">{totalOrders}</p>
-            <p className="card-trend positive">
-              <FiTrendingUp /> +12.8%
-            </p>
+            <p className="card-value">{summary.totalOrders}</p>
+            {formatGrowth(summary.ordersGrowth)}
           </div>
         </div>
 
@@ -111,10 +195,8 @@ const SellerAnalytics = () => {
           </div>
           <div className="card-content">
             <h3>Average Order Value</h3>
-            <p className="card-value">${averageOrderValue.toFixed(2)}</p>
-            <p className="card-trend positive">
-              <FiTrendingUp /> +2.4%
-            </p>
+            <p className="card-value">${summary.averageOrderValue.toFixed(2)}</p>
+            {formatGrowth(summary.avgOrderValueGrowth)}
           </div>
         </div>
 
@@ -124,10 +206,8 @@ const SellerAnalytics = () => {
           </div>
           <div className="card-content">
             <h3>Total Customers</h3>
-            <p className="card-value">284</p>
-            <p className="card-trend positive">
-              <FiTrendingUp /> +8.7%
-            </p>
+            <p className="card-value">{summary.totalCustomers}</p>
+            {formatGrowth(summary.customersGrowth)}
           </div>
         </div>
       </div>
@@ -138,11 +218,11 @@ const SellerAnalytics = () => {
         <div className="chart-card">
           <h3>Revenue Over Time</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={mockData.revenueData}>
+            <LineChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip />
+              <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
               <Legend />
               <Line
                 type="monotone"
@@ -158,7 +238,7 @@ const SellerAnalytics = () => {
         <div className="chart-card">
           <h3>Orders Over Time</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={mockData.orderData}>
+            <BarChart data={orderData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -172,51 +252,63 @@ const SellerAnalytics = () => {
         {/* Category Distribution */}
         <div className="chart-card">
           <h3>Sales by Category</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={mockData.categoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {mockData.categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+          {categoryData && categoryData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="no-data">
+              <p>No category data available</p>
+            </div>
+          )}
         </div>
 
         {/* Top Products Table */}
         <div className="chart-card">
           <h3>Top Selling Products</h3>
-          <div className="top-products-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Sales</th>
-                  <th>Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockData.topProducts.map((product, index) => (
-                  <tr key={index}>
-                    <td>{product.name}</td>
-                    <td>{product.sales}</td>
-                    <td>${product.revenue}</td>
+          {topProducts && topProducts.length > 0 ? (
+            <div className="top-products-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Sales</th>
+                    <th>Revenue</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {topProducts.map((product, index) => (
+                    <tr key={index}>
+                      <td>{product.name}</td>
+                      <td>{product.sales}</td>
+                      <td>${product.revenue.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="no-data">
+              <p>No product data available</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
