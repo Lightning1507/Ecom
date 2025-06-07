@@ -77,7 +77,9 @@ CREATE TABLE Product_categories (
 ----------------------
 CREATE TABLE Carts (
     cart_id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL UNIQUE REFERENCES Users(user_id) -- Tích hợp ràng buộc unique tại đây
+    user_id INTEGER NOT NULL REFERENCES Users(user_id), -- Tích hợp ràng buộc unique tại đây
+    seller_id INTEGER NOT NULL REFERENCES Sellers(seller_id),
+    UNIQUE (user_id, seller_id)
 );
 
 ----------------------

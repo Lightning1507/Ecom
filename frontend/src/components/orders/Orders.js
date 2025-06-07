@@ -1,53 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FiPackage, FiClock, FiCheck, FiTruck, FiX } from 'react-icons/fi';
+import { AuthContext } from '../../context/AuthContext';
 import './Orders.css';
 
-// Temporary mock data - replace with actual API call
-const mockOrders = [
-  {
-    id: '1',
-    date: '2024-03-15',
-    status: 'delivered',
-    total: 299.99,
-    items: [
-      { id: 1, name: 'Wireless Headphones', price: 199.99, quantity: 1 },
-      { id: 2, name: 'Phone Case', price: 29.99, quantity: 2 },
-    ],
-    shippingAddress: '123 Main St, City, Country',
-    trackingNumber: 'TRK123456789'
-  },
-  {
-    id: '2',
-    date: '2024-03-10',
-    status: 'in-transit',
-    total: 499.99,
-    items: [
-      { id: 3, name: 'Smart Watch', price: 499.99, quantity: 1 }
-    ],
-    shippingAddress: '456 Oak St, City, Country',
-    trackingNumber: 'TRK987654321'
-  },
-  {
-    id: '3',
-    date: '2024-03-05',
-    status: 'processing',
-    total: 89.97,
-    items: [
-      { id: 4, name: 'T-Shirt', price: 29.99, quantity: 3 }
-    ],
-    shippingAddress: '789 Pine St, City, Country',
-    trackingNumber: 'TRK456789123'
-  }
-];
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
 
 const getStatusIcon = (status) => {
   switch (status) {
     case 'delivered':
       return <FiCheck className="status-icon delivered" />;
-    case 'in-transit':
+    case 'shipped':
       return <FiTruck className="status-icon in-transit" />;
-    case 'processing':
+    case 'confirmed':
+      return <FiClock className="status-icon processing" />;
+    case 'pending':
       return <FiClock className="status-icon processing" />;
     case 'cancelled':
       return <FiX className="status-icon cancelled" />;
@@ -67,6 +35,29 @@ const formatDate = (dateString) => {
 const OrderCard = ({ order }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Helper function to get Cloudinary URL
+  const getCloudinaryUrl = (imagePath) => {
+    if (!imagePath) {
+      return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/v1/default-product-image`;
+    }
+    
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/${imagePath}`;
+  };
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   return (
     <motion.div
       className="order-card"
@@ -80,10 +71,11 @@ const OrderCard = ({ order }) => {
           <div className="order-details">
             <h3>Order #{order.id}</h3>
             <p className="order-date">{formatDate(order.date)}</p>
+            {order.storeName && <p className="store-name">From: {order.storeName}</p>}
           </div>
         </div>
         <div className="order-summary">
-          <p className="order-total">${order.total.toFixed(2)}</p>
+          <p className="order-total">{formatCurrency(order.payment.amount)}</p>
           <span className={`order-status ${order.status}`}>
             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
           </span>
@@ -99,22 +91,35 @@ const OrderCard = ({ order }) => {
         >
           <div className="order-items">
             <h4>Items</h4>
-            {order.items.map((item) => (
-              <div key={item.id} className="order-item">
+            {order.items.map((item, index) => (
+              <div key={index} className="order-item">
+                <img 
+                  src={getCloudinaryUrl(item.image)} 
+                  alt={item.name}
+                  className="item-image"
+                />
                 <div className="item-info">
                   <p className="item-name">{item.name}</p>
                   <p className="item-quantity">Qty: {item.quantity}</p>
+                  <p className="item-price">{formatCurrency(item.price)}</p>
                 </div>
-                <p className="item-price">${(item.price * item.quantity).toFixed(2)}</p>
+                <p className="item-total">{formatCurrency(item.price * item.quantity)}</p>
               </div>
             ))}
           </div>
 
-          <div className="order-shipping">
-            <h4>Shipping Information</h4>
-            <p className="shipping-address">{order.shippingAddress}</p>
-            <p className="tracking-number">
-              Tracking Number: <span>{order.trackingNumber}</span>
+          <div className="order-payment">
+            <h4>Payment Information</h4>
+            <p className="payment-method">
+              Method: <span>{order.payment.method === 'cod' ? 'Cash on Delivery' : 'Bank Transfer'}</span>
+            </p>
+            <p className="payment-status">
+              Payment Status: <span className={`payment-status-${order.payment.status}`}>
+                {order.payment.status.charAt(0).toUpperCase() + order.payment.status.slice(1)}
+              </span>
+            </p>
+            <p className="payment-amount">
+              Amount: <span>{formatCurrency(order.payment.amount)}</span>
             </p>
           </div>
         </motion.div>
@@ -124,6 +129,90 @@ const OrderCard = ({ order }) => {
 };
 
 const Orders = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { user, isAuthenticated } = useContext(AuthContext);
+
+  // Helper function to get auth token
+  const getAuthToken = useCallback(() => {
+    return user?.token || localStorage.getItem('token');
+  }, [user?.token]);
+
+  // Fetch orders from API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!isAuthenticated()) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const token = getAuthToken();
+        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/api/payment/orders`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders');
+        }
+
+        const data = await response.json();
+        setOrders(data.orders || []);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError(err.message || 'Failed to load orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [isAuthenticated, user, getAuthToken]);
+
+  if (!isAuthenticated()) {
+    return (
+      <div className="orders-container">
+        <div className="orders-error">
+          <h2>Please log in to view your orders</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="orders-container">
+        <div className="orders-loading">
+          <div className="loading-spinner"></div>
+          <p>Loading your orders...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="orders-container">
+        <div className="orders-error">
+          <h2>Error loading orders</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="orders-container">
       <motion.div
@@ -133,13 +222,21 @@ const Orders = () => {
         transition={{ duration: 0.3 }}
       >
         <h1>My Orders</h1>
-        <p>{mockOrders.length} orders placed</p>
+        <p>{orders.length} orders placed</p>
       </motion.div>
 
       <div className="orders-list">
-        {mockOrders.map((order) => (
-          <OrderCard key={order.id} order={order} />
-        ))}
+        {orders.length === 0 ? (
+          <div className="no-orders">
+            <FiPackage className="no-orders-icon" />
+            <h3>No orders yet</h3>
+            <p>Start shopping to see your orders here!</p>
+          </div>
+        ) : (
+          orders.map((order) => (
+            <OrderCard key={order.id} order={order} />
+          ))
+        )}
       </div>
     </div>
   );

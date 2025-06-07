@@ -2,11 +2,13 @@ import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiShoppingCart, FiUser, FiSearch, FiBell, FiLogOut, FiPackage, FiShoppingBag, FiSettings } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
+import { CartContext } from '../../context/CartContext';
 import SimpleNotifications from '../notifications/SimpleNotifications';
 import './Header.css';
 
 const Header = () => {
   const { user, logout } = useContext(AuthContext);
+  const { cartCount } = useContext(CartContext);
   const navigate = useNavigate();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,7 +79,7 @@ const Header = () => {
               </button>
               <Link to="/cart" className="header-icon-btn">
                 <FiShoppingCart />
-                <span className="cart-badge">2</span>
+                {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
               </Link>
               <div className="user-menu">
                 <button className="user-btn">

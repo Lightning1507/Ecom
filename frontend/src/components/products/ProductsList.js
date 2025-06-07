@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { FiStar, FiShoppingCart } from 'react-icons/fi';
 import ProductFilter from './ProductFilter';
+import { useCart } from '../../hooks/useCart';
 import './ProductsList.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -28,6 +29,33 @@ const ProductsList = () => {
   const [error, setError] = useState(null);
   const [filterChangeKey, setFilterChangeKey] = useState(0); // For triggering animations
   const [categoryName, setCategoryName] = useState(null);
+  const [addingToCart, setAddingToCart] = useState(new Set());
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Cart functionality
+  const { addToCart, error: cartError } = useCart();
+
+  // Handle add to cart
+  const handleAddToCart = async (productId) => {
+    setAddingToCart(prev => new Set(prev).add(productId));
+    
+    try {
+      const result = await addToCart(productId, 1);
+      if (result.success) {
+        setSuccessMessage('Item added to cart successfully!');
+        // Clear success message after 3 seconds
+        setTimeout(() => setSuccessMessage(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+    } finally {
+      setAddingToCart(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+    }
+  };
 
   const getCloudinaryUrl = (imagePath) => {
     if (!imagePath) {
@@ -303,6 +331,46 @@ const ProductsList = () => {
 
   return (
     <div className="products-page">
+      {/* Success Message */}
+      {successMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="success-message"
+          style={{
+            background: '#d4edda',
+            color: '#155724',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            border: '1px solid #c3e6cb'
+          }}
+        >
+          {successMessage}
+        </motion.div>
+      )}
+
+      {/* Error Message */}
+      {cartError && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="error-message"
+          style={{
+            background: '#f8d7da',
+            color: '#721c24',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            border: '1px solid #f5c6cb'
+          }}
+        >
+          {cartError}
+        </motion.div>
+      )}
+
       {/* Show search query if present */}
       {searchQuery && (
         <div className="search-results-header">
@@ -397,10 +465,15 @@ const ProductsList = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={`add-to-cart-button ${product.stock <= 0 ? 'disabled' : ''}`}
-                  disabled={product.stock <= 0}
+                  disabled={product.stock <= 0 || addingToCart.has(product.id)}
+                  onClick={() => handleAddToCart(product.id)}
                 >
                   <FiShoppingCart /> 
-                  {product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
+                  {addingToCart.has(product.id) 
+                    ? 'Adding...' 
+                    : product.stock <= 0 
+                      ? 'Out of Stock' 
+                      : 'Add to Cart'}
                 </motion.button>
               </div>
             </motion.div>

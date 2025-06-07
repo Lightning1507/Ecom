@@ -366,6 +366,14 @@ app.use('/api/orders', orderRoutes);
 // Mount dashboard routes
 app.use('/api/dashboard', dashboardRoutes);
 
+// Mount cart routes
+const cartRoutes = require('./routes/cart.routes');
+app.use('/api/cart', cartRoutes);
+
+// Mount payment routes
+const paymentRoutes = require('./routes/payment.routes');
+app.use('/api/payment', paymentRoutes);
+
 // Create seller profile
 app.post('/api/sellers/profile', authenticateUser, async (req, res) => {
   try {

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaShoppingCart, FaStar } from 'react-icons/fa';
+import { useCart } from '../../../hooks/useCart';
 import './styles.css';
 
 const Product = ({ product }) => {
   const {
+    id,
     name,
     description,
     price,
@@ -12,6 +14,20 @@ const Product = ({ product }) => {
     stock,
     rating = 4.5, // Default rating if not provided
   } = product;
+
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { addToCart } = useCart();
+
+  const handleAddToCart = async () => {
+    setIsAddingToCart(true);
+    try {
+      await addToCart(id, 1);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   return (
     <motion.div
@@ -59,9 +75,11 @@ const Product = ({ product }) => {
           <motion.button
             className="add-to-cart-btn"
             whileTap={{ scale: 0.95 }}
-            disabled={stock === 0}
+            disabled={stock === 0 || isAddingToCart}
+            onClick={handleAddToCart}
           >
-            <FaShoppingCart /> Add to Cart
+            <FaShoppingCart /> 
+            {isAddingToCart ? 'Adding...' : stock === 0 ? 'Out of Stock' : 'Add to Cart'}
           </motion.button>
         </div>
       </div>

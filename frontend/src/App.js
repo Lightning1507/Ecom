@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import ProtectedRoute from './components/routes/ProtectedRoute';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -15,6 +16,7 @@ import EditProduct from './components/products/EditProduct';
 import ProductsList from './components/products/ProductsList';
 import Profile from './components/Profile/Profile';
 import Cart from './components/Cart/Cart';
+import Checkout from './components/Checkout/Checkout';
 import Category from './components/Category/Category';
 import Orders from './components/orders/Orders';
 import SellerOrders from './components/seller/SellerOrders';
@@ -34,10 +36,11 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Header />
-          <main className="main-content">
+      <CartProvider>
+        <Router>
+          <div className="App">
+            <Header />
+            <main className="main-content">
             <div className="container">
               <Routes>
                 <Route path="/login" element={<Login />} />
@@ -49,6 +52,11 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                } />
                 <Route path="/categories" element={<Category />} />
                 <Route path="/category/:id" element={<ProductsList />} />
                 <Route path="/products" element={<ProductsList />} />
@@ -103,6 +111,7 @@ function App() {
           <Footer />
         </div>
       </Router>
+      </CartProvider>
     </AuthProvider>
   );
 }

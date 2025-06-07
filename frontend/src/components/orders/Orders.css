@@ -156,6 +156,96 @@
   border-bottom: none;
 }
 
+.item-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-right: 1rem;
+}
+
+.store-name {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0.25rem 0 0;
+}
+
+.order-payment {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.order-payment h4 {
+  margin: 0 0 0.5rem;
+  color: #2c3e50;
+}
+
+.payment-method,
+.payment-status,
+.payment-amount {
+  margin: 0.5rem 0;
+  color: #6c757d;
+}
+
+.payment-method span,
+.payment-status span,
+.payment-amount span {
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.payment-status-completed {
+  color: #28a745;
+}
+
+.payment-status-pending {
+  color: #ffc107;
+}
+
+.payment-status-failed {
+  color: #dc3545;
+}
+
+.orders-loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6c757d;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.orders-error {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #dc3545;
+}
+
+.no-orders {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6c757d;
+}
+
+.no-orders-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  color: #dee2e6;
+}
+
 .item-info {
   flex: 1;
 }
