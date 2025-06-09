@@ -378,6 +378,10 @@ app.use('/api/payment', paymentRoutes);
 const adminRoutes = require('./routes/admin.routes');
 app.use('/api/admin', adminRoutes);
 
+// Mount seller admin routes
+const sellerAdminRoutes = require('./routes/seller-admin.routes');
+app.use('/api/admin', sellerAdminRoutes);
+
 // Create seller profile
 app.post('/api/sellers/profile', authenticateUser, async (req, res) => {
   try {
