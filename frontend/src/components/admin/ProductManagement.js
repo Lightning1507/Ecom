@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { 
   FiSearch, 
   FiEdit2, 
@@ -6,149 +6,213 @@ import {
   FiEye, 
   FiRefreshCw,
   FiToggleLeft,
-  FiToggleRight
+  FiToggleRight,
+  FiUser
 } from 'react-icons/fi';
+import { AuthContext } from '../../context/AuthContext';
 import './ProductManagement.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+import './Modal.css';
 
 const ProductManagement = () => {
+  const { user } = useContext(AuthContext);
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterFeatured, setFilterFeatured] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [filterSeller, setFilterSeller] = useState('all');
+  const [sellers, setSellers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const categories = ['Electronics', 'Clothing', 'Home & Living', 'Books', 'Sports', 'Beauty'];
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  // Helper function to get auth token
+  const getAuthToken = useCallback(() => {
+    return user?.token || localStorage.getItem('token');
+  }, [user?.token]);
 
-  const fetchProducts = async () => {
+  // Fetch all products (admin view)
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/products/seller/products`, {
+      setError(null);
+      const token = getAuthToken();
+
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/products`, {
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch products');
-      }
-
       const data = await response.json();
-      setProducts(data.products || []);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching products:', err);
-      setError(err.message || 'Failed to load products');
+
+      if (data.success) {
+        setProducts(data.products);
+        setFilteredProducts(data.products);
+        
+        // Extract unique sellers and categories for filters
+        const uniqueSellers = [...new Set(data.products.map(p => p.seller.name))];
+        const uniqueCategories = [...new Set(data.products.flatMap(p => p.categories))];
+        
+        setSellers(uniqueSellers);
+        setCategories(uniqueCategories);
+      } else {
+        setError(data.message || 'Failed to fetch products');
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError('Failed to load products. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, getAuthToken]);
+
+  // Load products on component mount
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Filter products when search term or filters change
+  useEffect(() => {
+    let filtered = products;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.seller?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.seller?.owner?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply category filter
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter(product => 
+        product.categories.includes(filterCategory)
+      );
+    }
+
+    // Apply status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(product => product.status === filterStatus);
+    }
+
+    // Apply seller filter
+    if (filterSeller !== 'all') {
+      filtered = filtered.filter(product => product.seller.name === filterSeller);
+    }
+
+    setFilteredProducts(filtered);
+  }, [products, searchTerm, filterCategory, filterStatus, filterSeller]);
 
   const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    setSearchTerm(term);
-    applyFilters(term, filterCategory, filterStatus, filterFeatured);
-  };
-
-  const applyFilters = (search = searchTerm, category = filterCategory, status = filterStatus, featured = filterFeatured) => {
-    let filtered = [...products];
-
-    if (search) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(search) ||
-        product.category.toLowerCase().includes(search)
-      );
-    }
-
-    if (category !== 'all') {
-      filtered = filtered.filter(product => product.category === category);
-    }
-
-    if (status !== 'all') {
-      filtered = filtered.filter(product => product.status === status);
-    }
-
-    if (featured !== 'all') {
-      filtered = filtered.filter(product => 
-        featured === 'featured' ? product.featured : !product.featured
-      );
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'price':
-          comparison = a.price - b.price;
-          break;
-        case 'stock':
-          comparison = a.stock - b.stock;
-          break;
-        case 'sales':
-          comparison = (a.sales || 0) - (b.sales || 0);
-          break;
-        case 'rating':
-          comparison = (a.rating || 0) - (b.rating || 0);
-          break;
-        default:
-          comparison = 0;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-    setProducts(filtered);
+    setSearchTerm(e.target.value);
   };
 
   const handleReset = () => {
     setSearchTerm('');
     setFilterCategory('all');
     setFilterStatus('all');
-    setFilterFeatured('all');
-    setSortBy('name');
-    setSortOrder('asc');
-    fetchProducts();
+    setFilterSeller('all');
   };
 
   const handleStatusToggle = async (productId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/seller/products/${productId}/toggle-status`, {
+      const token = getAuthToken();
+      const productToUpdate = products.find(p => p.id === productId);
+      const newVisible = productToUpdate.status === 'inactive';
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/products/${productId}/status`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          // Add authorization header if needed
-          // 'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ visible: newVisible })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update product status');
-      }
+      const data = await response.json();
 
-      // Refresh the products list
-      fetchProducts();
-    } catch (err) {
-      console.error('Error updating product status:', err);
-      setError(err.message || 'Failed to update product status');
+      if (data.success) {
+        // Update the product in the local state
+        setProducts(products.map(product => {
+          if (product.id === productId) {
+            return { ...product, status: newVisible ? 'active' : 'inactive' };
+          }
+          return product;
+        }));
+      } else {
+        alert(data.message || 'Failed to update product status');
+      }
+    } catch (error) {
+      console.error('Error updating product status:', error);
+      alert('Failed to update product status');
     }
   };
 
-  const handleFeaturedToggle = async (productId) => {
-    // Show a message that featured functionality is not available
-    alert('Featured status is not supported in the current version.');
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const token = getAuthToken();
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Remove the product from local state
+        setProducts(products.filter(product => product.id !== productId));
+      } else {
+        alert(data.message || 'Failed to delete product');
+      }
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Failed to delete product');
+    }
+  };
+
+  const handleViewProduct = async (productId) => {
+    try {
+      const token = getAuthToken();
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/products/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSelectedProduct(data.product);
+        setShowDetailsModal(true);
+      } else {
+        alert(data.message || 'Failed to fetch product details');
+      }
+    } catch (error) {
+      console.error('Error fetching product details:', error);
+      alert('Failed to fetch product details');
+    }
   };
 
   const formatCurrency = (amount) => {
@@ -160,34 +224,16 @@ const ProductManagement = () => {
     }).format(amount);
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Loading products...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="error-container">
-        <h2>Error loading products</h2>
-        <p>{error}</p>
-        <button onClick={fetchProducts} className="btn-primary">
-          <FiRefreshCw /> Try Again
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="product-management">
       <div className="page-header">
-        <h1>Products Management</h1>
-        <button className="btn-primary">
-          Add New Product
-        </button>
+        <h1>Product Management</h1>
+        <div className="header-stats">
+          <div className="stat">
+            <span className="stat-number">{filteredProducts.length}</span>
+            <span className="stat-label">Products</span>
+          </div>
+        </div>
       </div>
 
       <div className="filters-section">
@@ -195,7 +241,7 @@ const ProductManagement = () => {
           <FiSearch />
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder="Search products, sellers..."
             value={searchTerm}
             onChange={handleSearch}
           />
@@ -206,10 +252,7 @@ const ProductManagement = () => {
             <label>Category:</label>
             <select 
               value={filterCategory}
-              onChange={(e) => {
-                setFilterCategory(e.target.value);
-                applyFilters(searchTerm, e.target.value, filterStatus, filterFeatured);
-              }}
+              onChange={(e) => setFilterCategory(e.target.value)}
             >
               <option value="all">All Categories</option>
               {categories.map(category => (
@@ -222,10 +265,7 @@ const ProductManagement = () => {
             <label>Status:</label>
             <select 
               value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value);
-                applyFilters(searchTerm, filterCategory, e.target.value, filterFeatured);
-              }}
+              onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -234,22 +274,15 @@ const ProductManagement = () => {
           </div>
 
           <div className="filter-group">
-            <label>Sort By:</label>
+            <label>Seller:</label>
             <select 
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [newSortBy, newSortOrder] = e.target.value.split('-');
-                setSortBy(newSortBy);
-                setSortOrder(newSortOrder);
-                applyFilters();
-              }}
+              value={filterSeller}
+              onChange={(e) => setFilterSeller(e.target.value)}
             >
-              <option value="name-asc">Name (A-Z)</option>
-              <option value="name-desc">Name (Z-A)</option>
-              <option value="price-asc">Price (Low-High)</option>
-              <option value="price-desc">Price (High-Low)</option>
-              <option value="stock-asc">Stock (Low-High)</option>
-              <option value="stock-desc">Stock (High-Low)</option>
+              <option value="all">All Sellers</option>
+              {sellers.map(seller => (
+                <option key={seller} value={seller}>{seller}</option>
+              ))}
             </select>
           </div>
 
@@ -259,67 +292,208 @@ const ProductManagement = () => {
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(product => (
-              <tr key={product.id}>
-                <td>{product.name}</td>
-                <td>
-                  <span className="category-badge">
-                    {product.category || 'Uncategorized'}
-                  </span>
-                </td>
-                <td>{formatCurrency(product.price)}</td>
-                <td>
-                  <span className={`stock-badge ${product.stock < 10 ? 'low' : product.stock < 30 ? 'medium' : 'high'}`}>
-                    {product.stock}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-badge ${product.status}`}>
-                    {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="btn-icon" title="View Product">
-                      <FiEye />
-                    </button>
-                    <button className="btn-icon" title="Edit Product">
-                      <FiEdit2 />
-                    </button>
-                    <button 
-                      className="btn-icon"
-                      title={product.status === 'active' ? 'Deactivate Product' : 'Activate Product'}
-                      onClick={() => handleStatusToggle(product.id)}
-                    >
-                      {product.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
-                    </button>
-                    <button className="btn-icon delete" title="Delete Product">
-                      <FiTrash2 />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? (
+        <div className="loading">
+          <p>Loading products...</p>
+        </div>
+      ) : error ? (
+        <div className="error">
+          <p>Error: {error}</p>
+          <button onClick={fetchProducts} className="btn-primary">
+            Retry
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Product</th>
+                  <th>Seller</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Sales</th>
+                  <th>Rating</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map(product => (
+                  <tr key={product.id}>
+                    <td>
+                      <div className="product-image-cell">
+                        {product.image ? (
+                          <img 
+                            src={product.image} 
+                            alt={product.name}
+                            className="product-table-image"
+                          />
+                        ) : (
+                          <div className="product-no-image">
+                            <span>No Image</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="product-info">
+                        <div className="product-name">{product.name}</div>
+                        <div className="product-description">
+                          {product.description?.substring(0, 50)}...
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="seller-info">
+                        <div className="seller-store">
+                          <FiUser className="seller-icon" />
+                          {product.seller.name}
+                        </div>
+                        <div className="seller-owner">{product.seller.owner}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="category-badge">
+                        {product.category}
+                      </span>
+                    </td>
+                    <td>{formatCurrency(product.price)}</td>
+                    <td>
+                      <span className={`stock-badge ${product.stock < 10 ? 'low' : product.stock < 30 ? 'medium' : 'high'}`}>
+                        {product.stock}
+                      </span>
+                    </td>
+                    <td>{product.totalSales || 0}</td>
+                    <td>
+                      <div className="rating">
+                        <span className={`rating-value ${product.rating >= 4 ? 'high' : product.rating >= 3 ? 'medium' : 'low'}`}>
+                          {product.rating?.toFixed(1) || '0.0'}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${product.status}`}>
+                        {product.status?.charAt(0).toUpperCase() + product.status?.slice(1)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn-icon" 
+                          title="View Details"
+                          onClick={() => handleViewProduct(product.id)}
+                        >
+                          <FiEye />
+                        </button>
+                        <button 
+                          className="btn-icon"
+                          title={product.status === 'active' ? 'Deactivate Product' : 'Activate Product'}
+                          onClick={() => handleStatusToggle(product.id)}
+                        >
+                          {product.status === 'active' ? <FiToggleRight /> : <FiToggleLeft />}
+                        </button>
+                        <button 
+                          className="btn-icon delete" 
+                          title="Delete Product"
+                          onClick={() => handleDeleteProduct(product.id)}
+                        >
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {products.length === 0 && (
-        <div className="no-results">
-          <p>No products found matching your search criteria.</p>
+          {filteredProducts.length === 0 && !loading && (
+            <div className="no-results">
+              <p>No products found matching your search criteria.</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Product Details Modal */}
+      {showDetailsModal && selectedProduct && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h2>Product Details</h2>
+              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="product-details">
+                <div className="detail-group">
+                  <label>Product Name:</label>
+                  <span>{selectedProduct.name}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Description:</label>
+                  <p>{selectedProduct.description}</p>
+                </div>
+                <div className="detail-group">
+                  <label>Price:</label>
+                  <span>{formatCurrency(selectedProduct.price)}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Stock:</label>
+                  <span>{selectedProduct.stock}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Categories:</label>
+                  <span>{selectedProduct.categories.join(', ')}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Seller Store:</label>
+                  <span>{selectedProduct.seller.name}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Seller Owner:</label>
+                  <span>{selectedProduct.seller.owner}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Seller Email:</label>
+                  <span>{selectedProduct.seller.email}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Seller Phone:</label>
+                  <span>{selectedProduct.seller.phone || 'N/A'}</span>
+                </div>
+                <div className="detail-group">
+                  <label>Status:</label>
+                  <span className={`status-badge ${selectedProduct.status}`}>
+                    {selectedProduct.status?.charAt(0).toUpperCase() + selectedProduct.status?.slice(1)}
+                  </span>
+                </div>
+                {selectedProduct.image && (
+                  <div className="detail-group">
+                    <label>Product Image:</label>
+                    <img 
+                      src={selectedProduct.image} 
+                      alt={selectedProduct.name}
+                      className="product-image-preview"
+                      style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'cover' }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={() => setShowDetailsModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

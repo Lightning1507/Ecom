@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import './UserManagement.css';
+import './Modal.css';
 
 const UserManagement = () => {
   const { user } = useContext(AuthContext);
@@ -19,6 +20,15 @@ const UserManagement = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    role: ''
+  });
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -167,6 +177,77 @@ const UserManagement = () => {
     }
   };
 
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      role: user.role || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = getAuthToken();
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          full_name: editForm.name,
+          email: editForm.email,
+          phone: editForm.phone,
+          address: editForm.address,
+          role: editForm.role
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the user in local state
+        setUsers(users.map(user => 
+          user.id === editingUser.id ? data.user : user
+        ));
+        setShowEditModal(false);
+        setEditingUser(null);
+      } else {
+        alert(data.message || 'Failed to update user');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      alert('Failed to update user');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingUser(null);
+    setEditForm({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      role: ''
+    });
+  };
+
   return (
     <div className="user-management">
       <div className="page-header">
@@ -265,7 +346,11 @@ const UserManagement = () => {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <button className="btn-icon" title="Edit User">
+                        <button 
+                          className="btn-icon" 
+                          title="Edit User"
+                          onClick={() => handleEditUser(user)}
+                        >
                           <FiEdit2 />
                         </button>
                         <button 
@@ -296,6 +381,88 @@ const UserManagement = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h2>Edit User</h2>
+              <button className="modal-close" onClick={handleCancelEdit}>×</button>
+            </div>
+            <form onSubmit={handleSaveUser}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="name">Full Name *</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={editForm.name}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email">Email *</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={editForm.email}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="phone">Phone</label>
+                  <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value={editForm.phone}
+                    onChange={handleEditFormChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="address">Address</label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    value={editForm.address}
+                    onChange={handleEditFormChange}
+                    rows="3"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="role">Role *</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={editForm.role}
+                    onChange={handleEditFormChange}
+                    required
+                  >
+                    <option value="">Select Role</option>
+                    <option value="customer">Customer</option>
+                    <option value="seller">Seller</option>
+                    <option value="admin">Admin</option>
+                    <option value="shipper">Shipper</option>
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={handleCancelEdit}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

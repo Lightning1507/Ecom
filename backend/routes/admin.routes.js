@@ -188,6 +188,81 @@ router.delete('/users/:userId', auth, adminAuth, async (req, res) => {
   }
 });
 
+// Update user
+router.put('/users/:userId', auth, adminAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { full_name, email, phone, address, role } = req.body;
+
+    // Don't allow admin to modify themselves
+    if (parseInt(userId) === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'You cannot modify your own account'
+      });
+    }
+
+    // Validate input
+    if (!full_name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name and email are required'
+      });
+    }
+
+    // Check if email is already taken by another user
+    const emailCheck = await pool.query(
+      'SELECT user_id FROM Users WHERE email = $1 AND user_id != $2',
+      [email, userId]
+    );
+
+    if (emailCheck.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already taken by another user'
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE Users 
+       SET full_name = $1, email = $2, phone = $3, address = $4, role = $5
+       WHERE user_id = $6 
+       RETURNING user_id, username, full_name, email, phone, address, role, locked`,
+      [full_name, email, phone || null, address || '', role, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const user = result.rows[0];
+    res.json({
+      success: true,
+      message: 'User updated successfully',
+      user: {
+        id: user.user_id,
+        name: user.full_name,
+        email: user.email,
+        username: user.username,
+        phone: user.phone,
+        address: user.address,
+        role: user.role,
+        status: user.locked ? 'suspended' : 'active'
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating user'
+    });
+  }
+});
+
 // Get user details by ID
 router.get('/users/:userId', auth, adminAuth, async (req, res) => {
   try {

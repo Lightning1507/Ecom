@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import './SellerManagement.css';
+import './Modal.css';
 
 const SellerManagement = () => {
   const { user } = useContext(AuthContext);
@@ -17,9 +18,19 @@ const SellerManagement = () => {
   const [filteredSellers, setFilteredSellers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterVerification, setFilterVerification] = useState('all');
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSeller, setEditingSeller] = useState(null);
+  const [editForm, setEditForm] = useState({
+    ownerName: '',
+    email: '',
+    phone: '',
+    address: '',
+    storeName: '',
+    description: ''
+  });
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -86,13 +97,8 @@ const SellerManagement = () => {
       filtered = filtered.filter(seller => seller.status === filterStatus);
     }
 
-    // Apply verification filter
-    if (filterVerification !== 'all') {
-      filtered = filtered.filter(seller => seller.verificationStatus === filterVerification);
-    }
-
     setFilteredSellers(filtered);
-  }, [sellers, searchTerm, filterStatus, filterVerification]);
+  }, [sellers, searchTerm, filterStatus]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -101,7 +107,6 @@ const SellerManagement = () => {
   const handleReset = () => {
     setSearchTerm('');
     setFilterStatus('all');
-    setFilterVerification('all');
   };
 
   const handleStatusToggle = async (sellerId) => {
@@ -168,6 +173,80 @@ const SellerManagement = () => {
     }
   };
 
+  const handleEditSeller = (seller) => {
+    setEditingSeller(seller);
+    setEditForm({
+      ownerName: seller.ownerName || '',
+      email: seller.email || '',
+      phone: seller.phone || '',
+      address: seller.address || '',
+      storeName: seller.name || '',
+      description: seller.description || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveSeller = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = getAuthToken();
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/sellers/${editingSeller.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          full_name: editForm.ownerName,
+          email: editForm.email,
+          phone: editForm.phone,
+          address: editForm.address,
+          store_name: editForm.storeName,
+          description: editForm.description
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the seller in local state
+        setSellers(sellers.map(seller => 
+          seller.id === editingSeller.id ? data.seller : seller
+        ));
+        setShowEditModal(false);
+        setEditingSeller(null);
+      } else {
+        alert(data.message || 'Failed to update seller');
+      }
+    } catch (error) {
+      console.error('Error updating seller:', error);
+      alert('Failed to update seller');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false);
+    setEditingSeller(null);
+    setEditForm({
+      ownerName: '',
+      email: '',
+      phone: '',
+      address: '',
+      storeName: '',
+      description: ''
+    });
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -210,18 +289,7 @@ const SellerManagement = () => {
             </select>
           </div>
 
-          <div className="filter-group">
-            <label>Verification:</label>
-            <select 
-              value={filterVerification}
-              onChange={(e) => setFilterVerification(e.target.value)}
-            >
-              <option value="all">All</option>
-              <option value="verified">Verified</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+
 
           <button className="btn-icon" onClick={handleReset} title="Reset Filters">
             <FiRefreshCw />
@@ -253,7 +321,6 @@ const SellerManagement = () => {
                   <th>Sales</th>
                   <th>Rating</th>
                   <th>Status</th>
-                  <th>Verification</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -283,16 +350,15 @@ const SellerManagement = () => {
                       </span>
                     </td>
                     <td>
-                      <span className={`verification-badge ${seller.verificationStatus}`}>
-                        {seller.verificationStatus?.charAt(0).toUpperCase() + seller.verificationStatus?.slice(1)}
-                      </span>
-                    </td>
-                    <td>
                       <div className="action-buttons">
                         <button className="btn-icon" title="View Store">
                           <FiEye />
                         </button>
-                        <button className="btn-icon" title="Edit Seller">
+                        <button 
+                          className="btn-icon" 
+                          title="Edit Seller"
+                          onClick={() => handleEditSeller(seller)}
+                        >
                           <FiEdit2 />
                         </button>
                         <button 
@@ -323,6 +389,92 @@ const SellerManagement = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Edit Seller Modal */}
+      {showEditModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h2>Edit Seller</h2>
+              <button className="modal-close" onClick={handleCancelEdit}>×</button>
+            </div>
+            <form onSubmit={handleSaveSeller}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="ownerName">Owner Name *</label>
+                  <input
+                    type="text"
+                    id="ownerName"
+                    name="ownerName"
+                    value={editForm.ownerName}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="email">Email *</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={editForm.email}
+                    onChange={handleEditFormChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="phone">Phone</label>
+                  <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value={editForm.phone}
+                    onChange={handleEditFormChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="address">Address</label>
+                  <textarea
+                    id="address"
+                    name="address"
+                    value={editForm.address}
+                    onChange={handleEditFormChange}
+                    rows="3"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="storeName">Store Name</label>
+                  <input
+                    type="text"
+                    id="storeName"
+                    name="storeName"
+                    value={editForm.storeName}
+                    onChange={handleEditFormChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="description">Store Description</label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={editForm.description}
+                    onChange={handleEditFormChange}
+                    rows="4"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={handleCancelEdit}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
