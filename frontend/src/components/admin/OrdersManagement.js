@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { 
   FiSearch, 
   FiRefreshCw,
@@ -9,135 +9,97 @@ import {
   FiX,
   FiAlertCircle
 } from 'react-icons/fi';
+import { AuthContext } from '../../context/AuthContext';
 import './OrdersManagement.css';
+import './Modal.css';
 
 const OrdersManagement = () => {
-  // Mock data - replace with API calls
-  const mockOrders = [
-    {
-      id: "ORD-2024-001",
-      customer: "John Doe",
-      date: "2024-03-15",
-      total: 299.99,
-      items: 3,
-      status: "pending",
-      paymentStatus: "paid",
-      shippingAddress: "123 Main St, City, Country",
-      trackingNumber: null
-    },
-    {
-      id: "ORD-2024-002",
-      customer: "Jane Smith",
-      date: "2024-03-14",
-      total: 159.50,
-      items: 2,
-      status: "processing",
-      paymentStatus: "paid",
-      shippingAddress: "456 Oak Ave, Town, Country",
-      trackingNumber: "TRK123456789"
-    },
-    {
-      id: "ORD-2024-003",
-      customer: "Mike Johnson",
-      date: "2024-03-13",
-      total: 499.99,
-      items: 5,
-      status: "shipped",
-      paymentStatus: "paid",
-      shippingAddress: "789 Pine Rd, Village, Country",
-      trackingNumber: "TRK987654321"
-    },
-    {
-      id: "ORD-2024-004",
-      customer: "Sarah Wilson",
-      date: "2024-03-12",
-      total: 89.99,
-      items: 1,
-      status: "delivered",
-      paymentStatus: "paid",
-      shippingAddress: "321 Elm St, City, Country",
-      trackingNumber: "TRK456789123"
-    },
-    {
-      id: "ORD-2024-005",
-      customer: "Robert Brown",
-      date: "2024-03-11",
-      total: 199.99,
-      items: 2,
-      status: "cancelled",
-      paymentStatus: "refunded",
-      shippingAddress: "654 Maple Dr, Town, Country",
-      trackingNumber: null
-    }
-  ];
-
-  const [orders, setOrders] = useState(mockOrders);
+  const { user } = useContext(AuthContext);
+  const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const handleSearch = (e) => {
-    const term = e.target.value.toLowerCase();
-    setSearchTerm(term);
-    applyFilters(term, statusFilter, dateFilter);
-  };
+  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  const getDateRange = (range) => {
-    const today = new Date();
-    const dates = {
-      today: new Date(today.setHours(0, 0, 0, 0)),
-      yesterday: new Date(today.setDate(today.getDate() - 1)),
-      week: new Date(today.setDate(today.getDate() - 7)),
-      month: new Date(today.setMonth(today.getMonth() - 1)),
-    };
-    return dates[range];
-  };
+  // Helper function to get auth token
+  const getAuthToken = useCallback(() => {
+    return user?.token || localStorage.getItem('token');
+  }, [user?.token]);
 
-  const applyFilters = (search = searchTerm, status = statusFilter, date = dateFilter) => {
-    let filtered = mockOrders;
+  // Fetch orders from API
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = getAuthToken();
 
-    // Search filter
-    if (search) {
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const queryParams = new URLSearchParams({
+        search: searchTerm,
+        status: statusFilter,
+        date: dateFilter,
+        sort: `${sortBy}-${sortOrder}`,
+        limit: '100' // Get more orders for better filtering experience
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/orders?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setOrders(data.orders);
+        setFilteredOrders(data.orders);
+      } else {
+        setError(data.message || 'Failed to fetch orders');
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setError('Failed to load orders. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [API_BASE_URL, getAuthToken, searchTerm, statusFilter, dateFilter, sortBy, sortOrder]);
+
+  // Load orders on component mount and when filters change
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Apply local filtering (for immediate feedback)
+  useEffect(() => {
+    let filtered = orders;
+
+    // Apply search filter locally for immediate feedback
+    if (searchTerm) {
       filtered = filtered.filter(order =>
-        order.id.toLowerCase().includes(search) ||
-        order.customer.toLowerCase().includes(search) ||
-        (order.trackingNumber && order.trackingNumber.toLowerCase().includes(search))
+        order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (order.trackingNumber && order.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Status filter
-    if (status !== 'all') {
-      filtered = filtered.filter(order => order.status === status);
-    }
+    setFilteredOrders(filtered);
+  }, [orders, searchTerm]);
 
-    // Date filter
-    if (date !== 'all') {
-      const dateThreshold = getDateRange(date);
-      filtered = filtered.filter(order => new Date(order.date) >= dateThreshold);
-    }
-
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'date':
-          comparison = new Date(b.date) - new Date(a.date);
-          break;
-        case 'total':
-          comparison = b.total - a.total;
-          break;
-        case 'items':
-          comparison = b.items - a.items;
-          break;
-        default:
-          comparison = 0;
-      }
-      return sortOrder === 'asc' ? -comparison : comparison;
-    });
-
-    setOrders(filtered);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
   };
 
   const handleReset = () => {
@@ -146,22 +108,72 @@ const OrdersManagement = () => {
     setDateFilter('all');
     setSortBy('date');
     setSortOrder('desc');
-    setOrders(mockOrders);
   };
 
-  const handleStatusUpdate = (orderId, newStatus) => {
-    setOrders(orders.map(order => {
-      if (order.id === orderId) {
-        return { ...order, status: newStatus };
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      const token = getAuthToken();
+      const orderIdNum = orderId.replace('ORD-', ''); // Remove prefix for API
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/orders/${orderIdNum}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the order in the local state
+        setOrders(orders.map(order => {
+          if (order.orderId === parseInt(orderIdNum)) {
+            return { ...order, status: newStatus };
+          }
+          return order;
+        }));
+      } else {
+        alert(data.message || 'Failed to update order status');
       }
-      return order;
-    }));
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update order status');
+    }
+  };
+
+  const handleViewOrder = async (orderId) => {
+    try {
+      const token = getAuthToken();
+      const orderIdNum = orderId.replace('ORD-', ''); // Remove prefix for API
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/orders/${orderIdNum}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSelectedOrder(data.order);
+        setShowDetailsModal(true);
+      } else {
+        alert(data.message || 'Failed to fetch order details');
+      }
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      alert('Failed to fetch order details');
+    }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending':
         return <FiAlertCircle />;
+      case 'confirmed':
       case 'processing':
         return <FiPackage />;
       case 'shipped':
@@ -176,9 +188,11 @@ const OrdersManagement = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -186,7 +200,9 @@ const OrdersManagement = () => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -194,6 +210,12 @@ const OrdersManagement = () => {
     <div className="orders-management">
       <div className="page-header">
         <h1>Orders Management</h1>
+        <div className="header-stats">
+          <div className="stat">
+            <span className="stat-number">{filteredOrders.length}</span>
+            <span className="stat-label">Orders</span>
+          </div>
+        </div>
       </div>
 
       <div className="filters-section">
@@ -212,14 +234,11 @@ const OrdersManagement = () => {
             <label>Status:</label>
             <select 
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                applyFilters(searchTerm, e.target.value, dateFilter);
-              }}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
+              <option value="confirmed">Confirmed</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
@@ -230,10 +249,7 @@ const OrdersManagement = () => {
             <label>Date:</label>
             <select 
               value={dateFilter}
-              onChange={(e) => {
-                setDateFilter(e.target.value);
-                applyFilters(searchTerm, statusFilter, e.target.value);
-              }}
+              onChange={(e) => setDateFilter(e.target.value)}
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
@@ -251,7 +267,6 @@ const OrdersManagement = () => {
                 const [newSortBy, newSortOrder] = e.target.value.split('-');
                 setSortBy(newSortBy);
                 setSortOrder(newSortOrder);
-                applyFilters();
               }}
             >
               <option value="date-desc">Date (Newest First)</option>
@@ -269,68 +284,211 @@ const OrdersManagement = () => {
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Date</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Payment</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map(order => (
-              <tr key={order.id}>
-                <td>{order.id}</td>
-                <td>{order.customer}</td>
-                <td>{formatDate(order.date)}</td>
-                <td>{order.items}</td>
-                <td>{formatCurrency(order.total)}</td>
-                <td>
-                  <span className={`status-badge ${order.status}`}>
-                    {getStatusIcon(order.status)}
-                    <span>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
-                  </span>
-                </td>
-                <td>
-                  <span className={`payment-badge ${order.paymentStatus}`}>
-                    {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-                  </span>
-                </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="btn-icon" title="View Order Details">
-                      <FiEye />
-                    </button>
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                      <select
-                        className="status-update"
-                        value={order.status}
-                        onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                      >
-                        <option value="pending">Mark Pending</option>
-                        <option value="processing">Mark Processing</option>
-                        <option value="shipped">Mark Shipped</option>
-                        <option value="delivered">Mark Delivered</option>
-                        <option value="cancelled">Mark Cancelled</option>
-                      </select>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? (
+        <div className="loading">
+          <p>Loading orders...</p>
+        </div>
+      ) : error ? (
+        <div className="error">
+          <p>Error: {error}</p>
+          <button onClick={fetchOrders} className="btn-primary">
+            Retry
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Payment</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map(order => (
+                  <tr key={order.orderId}>
+                    <td>{order.id}</td>
+                    <td>{order.customer}</td>
+                    <td>{formatDate(order.date)}</td>
+                    <td>{order.items}</td>
+                    <td>{formatCurrency(order.total)}</td>
+                    <td>
+                      <span className={`status-badge ${order.status}`}>
+                        {getStatusIcon(order.status)}
+                        <span>{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`payment-badge ${order.paymentStatus}`}>
+                        {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="btn-icon" 
+                          title="View Order Details"
+                          onClick={() => handleViewOrder(order.id)}
+                        >
+                          <FiEye />
+                        </button>
+                        {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                          <select
+                            className="status-update"
+                            value={order.status}
+                            onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                          >
+                            <option value="pending">Mark Pending</option>
+                            <option value="confirmed">Mark Confirmed</option>
+                            <option value="shipped">Mark Shipped</option>
+                            <option value="delivered">Mark Delivered</option>
+                            <option value="cancelled">Mark Cancelled</option>
+                          </select>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {orders.length === 0 && (
-        <div className="no-results">
-          <p>No orders found matching your search criteria.</p>
+          {filteredOrders.length === 0 && !loading && (
+            <div className="no-results">
+              <p>No orders found matching your search criteria.</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Order Details Modal */}
+      {showDetailsModal && selectedOrder && (
+        <div className="modal-overlay">
+          <div className="modal large">
+            <div className="modal-header">
+              <h2>Order Details - {selectedOrder.id}</h2>
+              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="order-details">
+                <div className="order-section">
+                  <h3>Order Information</h3>
+                  <div className="detail-grid">
+                    <div className="detail-group">
+                      <label>Order ID:</label>
+                      <span>{selectedOrder.id}</span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Date:</label>
+                      <span>{formatDate(selectedOrder.date)}</span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Status:</label>
+                      <span className={`status-badge ${selectedOrder.status}`}>
+                        {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="order-section">
+                  <h3>Customer Information</h3>
+                  <div className="detail-grid">
+                    <div className="detail-group">
+                      <label>Name:</label>
+                      <span>{selectedOrder.customer?.name || 'N/A'}</span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Email:</label>
+                      <span>{selectedOrder.customer?.email || 'N/A'}</span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Phone:</label>
+                      <span>{selectedOrder.customer?.phone || 'N/A'}</span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Address:</label>
+                      <span>{selectedOrder.customer?.address || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="order-section">
+                  <h3>Payment Information</h3>
+                  <div className="detail-grid">
+                    <div className="detail-group">
+                      <label>Amount:</label>
+                      <span>{formatCurrency(selectedOrder.payment?.amount || 0)}</span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Status:</label>
+                      <span className={`payment-badge ${selectedOrder.payment?.status}`}>
+                        {selectedOrder.payment?.status?.charAt(0).toUpperCase() + selectedOrder.payment?.status?.slice(1) || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="detail-group">
+                      <label>Method:</label>
+                      <span>{selectedOrder.payment?.method || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedOrder.shipping && (
+                  <div className="order-section">
+                    <h3>Shipping Information</h3>
+                    <div className="detail-grid">
+                      <div className="detail-group">
+                        <label>Tracking Number:</label>
+                        <span>{selectedOrder.shipping.trackingNumber || 'N/A'}</span>
+                      </div>
+                      <div className="detail-group">
+                        <label>Status:</label>
+                        <span>{selectedOrder.shipping.status || 'N/A'}</span>
+                      </div>
+                      <div className="detail-group">
+                        <label>Company:</label>
+                        <span>{selectedOrder.shipping.company || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="order-section">
+                  <h3>Order Items</h3>
+                  <div className="items-list">
+                    {selectedOrder.items?.map((item, index) => (
+                      <div key={index} className="order-item">
+                        <div className="item-info">
+                          <span className="item-name">{item.name}</span>
+                          <span className="item-quantity">Qty: {item.quantity}</span>
+                        </div>
+                        <div className="item-price">
+                          <span>{formatCurrency(item.price)} x {item.quantity}</span>
+                          <span className="item-total">{formatCurrency(item.total)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={() => setShowDetailsModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

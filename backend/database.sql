@@ -101,7 +101,13 @@ CREATE TABLE Cart_items (
 CREATE TABLE Orders (
     order_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES Users(user_id),
-    seller_id INTEGER NOT NULL REFERENCES Sellers(seller_id), -- Đưa vào trực tiếp
+    seller_id INTEGER NOT NULL REFERENCES Sellers(seller_id),
+    Shipping_units_id INTEGER REFERENCES Shipping_units(Shipping_units_id),
+    tracking_number VARCHAR(100) UNIQUE,
+    shipping_status VARCHAR(30) CHECK (
+        shipping_status IN ('preparing', 'in_transit', 'delivered', 'returned')
+    ),
+    estimated_delivery DATE,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(20) NOT NULL CHECK (
         status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')
@@ -136,21 +142,7 @@ CREATE TABLE Payments (
 );
 
 ----------------------
--- 13. Shipments
-----------------------
-CREATE TABLE Shipments (
-    order_id INTEGER NOT NULL UNIQUE REFERENCES Orders(order_id),
-    Shipping_units_id INTEGER NOT NULL REFERENCES Shipping_units(Shipping_units_id),
-    status VARCHAR(30) NOT NULL CHECK (
-        status IN ('preparing', 'in_transit', 'delivered', 'returned')
-    ),
-    tracking_number VARCHAR(100) UNIQUE,
-    estimated_delivery DATE,
-    PRIMARY KEY (order_id, Shipping_units_id)
-);
-
-----------------------
--- 14. Reviews
+-- 13. Reviews
 ----------------------
 CREATE TABLE Reviews (
     review_id SERIAL PRIMARY KEY,

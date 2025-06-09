@@ -688,4 +688,322 @@ router.get('/products/:productId', auth, adminAuth, async (req, res) => {
   }
 });
 
+// ====================
+// ADMIN ORDERS MANAGEMENT ROUTES
+// ====================
+
+// Get all orders (admin view)
+router.get('/orders', auth, adminAuth, async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = '', status = '', date = '', sort = 'date-desc' } = req.query;
+    const offset = (page - 1) * limit;
+
+    let whereConditions = ['1=1'];
+    let params = [];
+    let paramIndex = 1;
+
+    // Add search filter
+    if (search) {
+      whereConditions.push(`(
+        CAST(o.order_id AS TEXT) ILIKE $${paramIndex} OR 
+        u.full_name ILIKE $${paramIndex} OR 
+        u.username ILIKE $${paramIndex} OR 
+        o.tracking_number ILIKE $${paramIndex}
+      )`);
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Add status filter
+    if (status && status !== 'all') {
+      whereConditions.push(`o.status = $${paramIndex}`);
+      params.push(status);
+      paramIndex++;
+    }
+
+    // Add date filter
+    if (date && date !== 'all') {
+      let dateCondition = '';
+      switch (date) {
+        case 'today':
+          dateCondition = `DATE(o.order_date) = CURRENT_DATE`;
+          break;
+        case 'yesterday':
+          dateCondition = `DATE(o.order_date) = CURRENT_DATE - INTERVAL '1 day'`;
+          break;
+        case 'week':
+          dateCondition = `o.order_date >= CURRENT_DATE - INTERVAL '7 days'`;
+          break;
+        case 'month':
+          dateCondition = `o.order_date >= CURRENT_DATE - INTERVAL '30 days'`;
+          break;
+      }
+      if (dateCondition) {
+        whereConditions.push(dateCondition);
+      }
+    }
+
+    const whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+
+    // Determine sort order
+    const [sortBy, sortOrder] = sort.split('-');
+    let orderByClause = '';
+    switch (sortBy) {
+      case 'date':
+        orderByClause = `ORDER BY o.order_date ${sortOrder.toUpperCase()}`;
+        break;
+      case 'total':
+        orderByClause = `ORDER BY p.amount ${sortOrder.toUpperCase()}`;
+        break;
+      case 'items':
+        orderByClause = `ORDER BY item_count ${sortOrder.toUpperCase()}`;
+        break;
+      default:
+        orderByClause = 'ORDER BY o.order_date DESC';
+    }
+
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(DISTINCT o.order_id) 
+      FROM Orders o
+      LEFT JOIN Users u ON o.user_id = u.user_id
+      LEFT JOIN Sellers sel ON o.seller_id = sel.seller_id
+      LEFT JOIN Payments p ON o.order_id = p.order_id
+      ${whereClause}
+    `;
+    const totalResult = await pool.query(countQuery, params);
+    const total = parseInt(totalResult.rows[0].count);
+
+    // Get orders with all related information
+    const ordersQuery = `
+      SELECT DISTINCT
+        o.order_id,
+        o.order_date,
+        o.status as order_status,
+        o.tracking_number,
+        o.shipping_status,
+        o.estimated_delivery,
+        u.full_name as customer_name,
+        u.username as customer_username,
+        u.email as customer_email,
+        u.address as customer_address,
+        sel.store_name as seller_name,
+        p.amount as total_amount,
+        p.status as payment_status,
+        p.payment_method,
+        (
+          SELECT COUNT(*) 
+          FROM Order_items oi 
+          WHERE oi.order_id = o.order_id
+        ) as item_count,
+        (
+          SELECT SUM(oi.quantity) 
+          FROM Order_items oi 
+          WHERE oi.order_id = o.order_id
+        ) as total_quantity
+      FROM Orders o
+      LEFT JOIN Users u ON o.user_id = u.user_id
+      LEFT JOIN Sellers sel ON o.seller_id = sel.seller_id
+      LEFT JOIN Payments p ON o.order_id = p.order_id
+      ${whereClause}
+      ${orderByClause}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    
+    params.push(limit, offset);
+    const ordersResult = await pool.query(ordersQuery, params);
+
+    // Format the data to match frontend expectations
+    const orders = ordersResult.rows.map(order => ({
+      id: `ORD-${order.order_id}`,
+      orderId: order.order_id,
+      customer: order.customer_name || order.customer_username || 'Unknown Customer',
+      customerEmail: order.customer_email,
+      date: order.order_date,
+      total: parseFloat(order.total_amount) || 0,
+      items: parseInt(order.total_quantity) || 0,
+      itemCount: parseInt(order.item_count) || 0,
+      status: order.order_status,
+      paymentStatus: order.payment_status || 'pending',
+      paymentMethod: order.payment_method,
+      shippingAddress: order.customer_address || 'No address provided',
+      trackingNumber: order.tracking_number,
+      shippingStatus: order.shipping_status,
+      seller: order.seller_name || 'Unknown Seller'
+    }));
+
+    res.json({
+      success: true,
+      orders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching orders'
+    });
+  }
+});
+
+// Update order status (admin)
+router.put('/orders/:orderId/status', auth, adminAuth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
+      });
+    }
+
+    const result = await pool.query(
+      'UPDATE Orders SET status = $1 WHERE order_id = $2 RETURNING *',
+      [status, orderId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Order status updated to ${status}`,
+      order: {
+        id: result.rows[0].order_id,
+        status: result.rows[0].status
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating order status'
+    });
+  }
+});
+
+// Get order details (admin)
+router.get('/orders/:orderId', auth, adminAuth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // Get order with customer, seller, payment, and shipping info
+    const orderQuery = `
+      SELECT 
+        o.*,
+        u.full_name as customer_name,
+        u.username as customer_username,
+        u.email as customer_email,
+        u.phone as customer_phone,
+        u.address as customer_address,
+        sel.store_name as seller_name,
+        seller_user.full_name as seller_owner,
+        seller_user.email as seller_email,
+        p.amount as total_amount,
+        p.status as payment_status,
+        p.payment_method,
+        p.payment_date,
+        ship_unit.company_name as shipping_company,
+        ship_user.full_name as shipper_name
+      FROM Orders o
+      LEFT JOIN Users u ON o.user_id = u.user_id
+      LEFT JOIN Sellers sel ON o.seller_id = sel.seller_id
+      LEFT JOIN Users seller_user ON sel.seller_id = seller_user.user_id
+      LEFT JOIN Payments p ON o.order_id = p.order_id
+      LEFT JOIN Shipping_units ship_unit ON o.Shipping_units_id = ship_unit.Shipping_units_id
+      LEFT JOIN Users ship_user ON ship_unit.Shipping_units_id = ship_user.user_id
+      WHERE o.order_id = $1
+    `;
+
+    const orderResult = await pool.query(orderQuery, [orderId]);
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // Get order items
+    const itemsQuery = `
+      SELECT 
+        oi.*,
+        p.name as product_name,
+        p.description as product_description,
+        p.img_path as product_image
+      FROM Order_items oi
+      LEFT JOIN Products p ON oi.product_id = p.product_id
+      WHERE oi.order_id = $1
+    `;
+
+    const itemsResult = await pool.query(itemsQuery, [orderId]);
+
+    const order = orderResult.rows[0];
+    res.json({
+      success: true,
+      order: {
+        id: `ORD-${order.order_id}`,
+        orderId: order.order_id,
+        date: order.order_date,
+        status: order.status,
+        customer: {
+          name: order.customer_name || order.customer_username,
+          email: order.customer_email,
+          phone: order.customer_phone,
+          address: order.customer_address
+        },
+        seller: {
+          storeName: order.seller_name,
+          owner: order.seller_owner,
+          email: order.seller_email
+        },
+        payment: {
+          amount: parseFloat(order.total_amount) || 0,
+          status: order.payment_status,
+          method: order.payment_method,
+          date: order.payment_date
+        },
+        shipping: {
+          trackingNumber: order.tracking_number,
+          status: order.shipping_status,
+          estimatedDelivery: order.estimated_delivery,
+          company: order.shipping_company,
+          shipper: order.shipper_name
+        },
+        items: itemsResult.rows.map(item => ({
+          productId: item.product_id,
+          name: item.product_name,
+          description: item.product_description,
+          image: item.product_image,
+          quantity: item.quantity,
+          price: parseFloat(item.price),
+          total: parseFloat(item.price) * item.quantity
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching order details'
+    });
+  }
+});
+
 module.exports = router; 
