@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { 
   FiSearch, 
-  FiEdit2, 
   FiTrash2, 
   FiEye, 
   FiRefreshCw,
