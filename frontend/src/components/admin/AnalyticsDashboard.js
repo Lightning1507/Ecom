@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,63 +48,144 @@ const LoadingChart = () => (
 );
 
 const AnalyticsDashboard = () => {
-  // Mock data - replace with API calls
   const [timeRange, setTimeRange] = useState('7days');
-  
-  // Mock metrics data
-  const metrics = {
-    totalRevenue: 152849.99,
-    totalOrders: 1234,
-    totalCustomers: 856,
-    averageOrderValue: 123.86,
-    pendingOrders: 45,
-    completedOrders: 1189
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [analytics, setAnalytics] = useState({
+    metrics: {
+      totalRevenue: 0,
+      totalOrders: 0,
+      totalCustomers: 0,
+      averageOrderValue: 0,
+      pendingOrders: 0,
+      completedOrders: 0
+    },
+    charts: {
+      revenueData: [],
+      categoryData: [],
+      dailyOrdersData: []
+    }
+  });
+
+  // Helper function to get authentication token
+  const getAuthToken = () => {
+    try {
+      let token = localStorage.getItem('token');
+      if (token) return token;
+
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.token) return user.token;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
   };
 
-  // Mock data for revenue chart
-  const revenueData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-      {
-        label: 'Revenue',
-        data: [12500, 14200, 11800, 15600, 13200, 16800, 14500],
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.1)',
-        tension: 0.4,
-        fill: true
+  // Fetch analytics data from API
+  const fetchAnalyticsData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = getAuthToken();
+      
+      if (!token) {
+        setError('Authentication required. Please log in as an administrator.');
+        return;
       }
-    ]
-  };
 
-  // Mock data for orders by category
-  const categoryData = {
-    labels: ['Electronics', 'Clothing', 'Books', 'Home & Living', 'Sports', 'Beauty'],
-    datasets: [
-      {
-        label: 'Orders by Category',
-        data: [350, 274, 156, 198, 142, 114],
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.8)',
-          'rgba(54, 162, 235, 0.8)',
-          'rgba(255, 206, 86, 0.8)',
-          'rgba(75, 192, 192, 0.8)',
-          'rgba(153, 102, 255, 0.8)',
-          'rgba(255, 159, 64, 0.8)'
-        ]
-      }
-    ]
-  };
+      const response = await fetch(`http://localhost:5000/api/admin/analytics?timeRange=${timeRange}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  // Mock data for daily orders
-  const ordersData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-      {
-        label: 'Orders',
-        data: [65, 78, 52, 83, 72, 93, 76],
-        backgroundColor: 'rgba(54, 162, 235, 0.8)'
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch analytics data');
       }
-    ]
+
+      if (data.success) {
+        setAnalytics(data.analytics);
+        setError(null);
+      } else {
+        throw new Error(data.message || 'Failed to fetch analytics data');
+      }
+
+    } catch (err) {
+      console.error('Error fetching analytics data:', err);
+      setError('Failed to load analytics data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [timeRange]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
+
+  // Format chart data for Chart.js
+  const formatChartData = () => {
+    const formatDate = (dateStr) => {
+      const date = new Date(dateStr);
+      if (timeRange === '7days') {
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+    };
+
+    // Revenue chart data
+    const revenueData = {
+      labels: analytics.charts.revenueData.map(item => formatDate(item.date)),
+      datasets: [
+        {
+          label: 'Revenue',
+          data: analytics.charts.revenueData.map(item => item.revenue),
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.1)',
+          tension: 0.4,
+          fill: true
+        }
+      ]
+    };
+
+    // Category chart data
+    const categoryData = {
+      labels: analytics.charts.categoryData.map(item => item.category),
+      datasets: [
+        {
+          label: 'Orders by Category',
+          data: analytics.charts.categoryData.map(item => item.orders),
+          backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+            'rgba(255, 159, 64, 0.8)'
+          ]
+        }
+      ]
+    };
+
+    // Daily orders chart data
+    const ordersData = {
+      labels: analytics.charts.dailyOrdersData.map(item => formatDate(item.date)),
+      datasets: [
+        {
+          label: 'Orders',
+          data: analytics.charts.dailyOrdersData.map(item => item.orders),
+          backgroundColor: 'rgba(54, 162, 235, 0.8)'
+        }
+      ]
+    };
+
+    return { revenueData, categoryData, ordersData };
   };
 
   const formatCurrency = (amount) => {
@@ -160,6 +241,32 @@ const AnalyticsDashboard = () => {
     cutout: '70%'
   };
 
+  if (loading) {
+    return (
+      <div className="analytics-dashboard">
+        <div className="loading-state">
+          <h2>Loading analytics...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="analytics-dashboard">
+        <div className="error-state">
+          <h2>Error loading analytics</h2>
+          <p>{error}</p>
+          <button onClick={fetchAnalyticsData} className="retry-button">
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { revenueData, categoryData, ordersData } = formatChartData();
+
   return (
     <div className="analytics-dashboard">
       <div className="dashboard-header">
@@ -174,7 +281,7 @@ const AnalyticsDashboard = () => {
             <option value="90days">Last 90 Days</option>
             <option value="year">This Year</option>
           </select>
-          <button className="btn-icon" title="Refresh Data">
+          <button className="btn-icon" title="Refresh Data" onClick={fetchAnalyticsData}>
             <FiRefreshCw size={16} />
           </button>
         </div>
@@ -187,8 +294,7 @@ const AnalyticsDashboard = () => {
           </div>
           <div className="metric-content">
             <h3>Total Revenue</h3>
-            <p className="metric-value">{formatCurrency(metrics.totalRevenue)}</p>
-            <p className="metric-change positive">+12.5% from last period</p>
+            <p className="metric-value">{formatCurrency(analytics.metrics.totalRevenue)}</p>
           </div>
         </div>
 
@@ -198,8 +304,7 @@ const AnalyticsDashboard = () => {
           </div>
           <div className="metric-content">
             <h3>Total Orders</h3>
-            <p className="metric-value">{metrics.totalOrders}</p>
-            <p className="metric-change positive">+8.2% from last period</p>
+            <p className="metric-value">{analytics.metrics.totalOrders}</p>
           </div>
         </div>
 
@@ -209,8 +314,7 @@ const AnalyticsDashboard = () => {
           </div>
           <div className="metric-content">
             <h3>Total Customers</h3>
-            <p className="metric-value">{metrics.totalCustomers}</p>
-            <p className="metric-change positive">+5.8% from last period</p>
+            <p className="metric-value">{analytics.metrics.totalCustomers}</p>
           </div>
         </div>
 
@@ -220,8 +324,7 @@ const AnalyticsDashboard = () => {
           </div>
           <div className="metric-content">
             <h3>Average Order Value</h3>
-            <p className="metric-value">{formatCurrency(metrics.averageOrderValue)}</p>
-            <p className="metric-change positive">+3.2% from last period</p>
+            <p className="metric-value">{formatCurrency(analytics.metrics.averageOrderValue)}</p>
           </div>
         </div>
       </div>
@@ -262,11 +365,11 @@ const AnalyticsDashboard = () => {
           </div>
           <div className="status-content">
             <h3>Pending Orders</h3>
-            <p className="status-value">{metrics.pendingOrders}</p>
+            <p className="status-value">{analytics.metrics.pendingOrders}</p>
             <div className="status-bar">
               <div 
                 className="status-progress" 
-                style={{ width: `${(metrics.pendingOrders / (metrics.pendingOrders + metrics.completedOrders)) * 100}%` }}
+                style={{ width: `${analytics.metrics.pendingOrders + analytics.metrics.completedOrders > 0 ? (analytics.metrics.pendingOrders / (analytics.metrics.pendingOrders + analytics.metrics.completedOrders)) * 100 : 0}%` }}
               ></div>
             </div>
           </div>
@@ -278,11 +381,11 @@ const AnalyticsDashboard = () => {
           </div>
           <div className="status-content">
             <h3>Completed Orders</h3>
-            <p className="status-value">{metrics.completedOrders}</p>
+            <p className="status-value">{analytics.metrics.completedOrders}</p>
             <div className="status-bar">
               <div 
                 className="status-progress" 
-                style={{ width: `${(metrics.completedOrders / (metrics.pendingOrders + metrics.completedOrders)) * 100}%` }}
+                style={{ width: `${analytics.metrics.pendingOrders + analytics.metrics.completedOrders > 0 ? (analytics.metrics.completedOrders / (analytics.metrics.pendingOrders + analytics.metrics.completedOrders)) * 100 : 0}%` }}
               ></div>
             </div>
           </div>

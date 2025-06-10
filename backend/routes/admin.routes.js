@@ -727,4 +727,203 @@ router.put('/orders/:orderId/payment-status', auth, adminAuth, async (req, res) 
   }
 });
 
+// Get analytics data
+router.get('/analytics', auth, adminAuth, async (req, res) => {
+  try {
+    const { timeRange = '7days' } = req.query;
+    
+    // Calculate date range
+    let dateCondition = '';
+    let chartDateCondition = '';
+    switch (timeRange) {
+      case '7days':
+        dateCondition = `AND o.order_date >= CURRENT_DATE - INTERVAL '7 days'`;
+        chartDateCondition = `WHERE order_date >= CURRENT_DATE - INTERVAL '7 days'`;
+        break;
+      case '30days':
+        dateCondition = `AND o.order_date >= CURRENT_DATE - INTERVAL '30 days'`;
+        chartDateCondition = `WHERE order_date >= CURRENT_DATE - INTERVAL '30 days'`;
+        break;
+      case '90days':
+        dateCondition = `AND o.order_date >= CURRENT_DATE - INTERVAL '90 days'`;
+        chartDateCondition = `WHERE order_date >= CURRENT_DATE - INTERVAL '90 days'`;
+        break;
+      case 'year':
+        dateCondition = `AND o.order_date >= CURRENT_DATE - INTERVAL '1 year'`;
+        chartDateCondition = `WHERE order_date >= CURRENT_DATE - INTERVAL '1 year'`;
+        break;
+      default:
+        dateCondition = `AND o.order_date >= CURRENT_DATE - INTERVAL '7 days'`;
+        chartDateCondition = `WHERE order_date >= CURRENT_DATE - INTERVAL '7 days'`;
+    }
+
+    // Execute all analytics queries in parallel
+    const [
+      revenueResult,
+      ordersResult,
+      customersResult,
+      avgOrderResult,
+      pendingOrdersResult,
+      completedOrdersResult,
+      revenueChartResult,
+      categoryOrdersResult,
+      dailyOrdersResult
+    ] = await Promise.all([
+      // Total revenue for time period
+      pool.query(`
+        SELECT COALESCE(SUM(p.amount), 0) as total_revenue
+        FROM Payments p
+        JOIN Orders o ON p.order_id = o.order_id
+        WHERE p.status = 'completed' ${dateCondition}
+      `),
+      
+      // Total orders for time period
+      pool.query(`
+        SELECT COUNT(*) as total_orders
+        FROM Orders o
+        WHERE 1=1 ${dateCondition}
+      `),
+      
+      // Total customers for time period (unique customers who placed orders)
+      pool.query(`
+        SELECT COUNT(DISTINCT o.user_id) as total_customers
+        FROM Orders o
+        WHERE 1=1 ${dateCondition}
+      `),
+      
+      // Average order value for time period
+      pool.query(`
+        SELECT COALESCE(AVG(p.amount), 0) as avg_order_value
+        FROM Payments p
+        JOIN Orders o ON p.order_id = o.order_id
+        WHERE p.status = 'completed' ${dateCondition}
+      `),
+      
+      // Pending orders count
+      pool.query(`
+        SELECT COUNT(*) as pending_orders
+        FROM Orders o
+        WHERE o.status IN ('pending', 'confirmed') ${dateCondition}
+      `),
+      
+      // Completed orders count
+      pool.query(`
+        SELECT COUNT(*) as completed_orders
+        FROM Orders o
+        WHERE o.status = 'delivered' ${dateCondition}
+      `),
+      
+      // Revenue chart data (daily for last 7 days or weekly for longer periods)
+      timeRange === '7days' ? 
+        pool.query(`
+          SELECT 
+            DATE(o.order_date) as date,
+            COALESCE(SUM(p.amount), 0) as revenue
+          FROM Orders o
+          LEFT JOIN Payments p ON o.order_id = p.order_id AND p.status = 'completed'
+          ${chartDateCondition}
+          GROUP BY DATE(o.order_date)
+          ORDER BY DATE(o.order_date)
+        `) :
+        pool.query(`
+          SELECT 
+            DATE_TRUNC('week', o.order_date) as date,
+            COALESCE(SUM(p.amount), 0) as revenue
+          FROM Orders o
+          LEFT JOIN Payments p ON o.order_id = p.order_id AND p.status = 'completed'
+          ${chartDateCondition}
+          GROUP BY DATE_TRUNC('week', o.order_date)
+          ORDER BY DATE_TRUNC('week', o.order_date)
+        `),
+      
+      // Orders by category
+      pool.query(`
+        SELECT 
+          c.name as category_name,
+          COUNT(DISTINCT o.order_id) as order_count
+        FROM Orders o
+        JOIN Order_items oi ON o.order_id = oi.order_id
+        JOIN Products pr ON oi.product_id = pr.product_id
+        JOIN Product_categories pc ON pr.product_id = pc.product_id
+        JOIN Categories c ON pc.category_id = c.category_id
+        WHERE 1=1 ${dateCondition}
+        GROUP BY c.category_id, c.name
+        ORDER BY order_count DESC
+        LIMIT 6
+      `),
+      
+      // Daily orders for chart
+      timeRange === '7days' ?
+        pool.query(`
+          SELECT 
+            DATE(o.order_date) as date,
+            COUNT(*) as order_count
+          FROM Orders o
+          ${chartDateCondition}
+          GROUP BY DATE(o.order_date)
+          ORDER BY DATE(o.order_date)
+        `) :
+        pool.query(`
+          SELECT 
+            DATE_TRUNC('week', o.order_date) as date,
+            COUNT(*) as order_count
+          FROM Orders o
+          ${chartDateCondition}
+          GROUP BY DATE_TRUNC('week', o.order_date)
+          ORDER BY DATE_TRUNC('week', o.order_date)
+        `)
+    ]);
+
+    // Process results
+    const totalRevenue = parseFloat(revenueResult.rows[0].total_revenue) || 0;
+    const totalOrders = parseInt(ordersResult.rows[0].total_orders) || 0;
+    const totalCustomers = parseInt(customersResult.rows[0].total_customers) || 0;
+    const averageOrderValue = parseFloat(avgOrderResult.rows[0].avg_order_value) || 0;
+    const pendingOrders = parseInt(pendingOrdersResult.rows[0].pending_orders) || 0;
+    const completedOrders = parseInt(completedOrdersResult.rows[0].completed_orders) || 0;
+
+    // Format chart data
+    const revenueChartData = revenueChartResult.rows.map(row => ({
+      date: row.date,
+      revenue: parseFloat(row.revenue) || 0
+    }));
+
+    const categoryData = categoryOrdersResult.rows.map(row => ({
+      category: row.category_name,
+      orders: parseInt(row.order_count) || 0
+    }));
+
+    const dailyOrdersData = dailyOrdersResult.rows.map(row => ({
+      date: row.date,
+      orders: parseInt(row.order_count) || 0
+    }));
+
+    res.json({
+      success: true,
+      analytics: {
+        metrics: {
+          totalRevenue,
+          totalOrders,
+          totalCustomers,
+          averageOrderValue,
+          pendingOrders,
+          completedOrders
+        },
+        charts: {
+          revenueData: revenueChartData,
+          categoryData,
+          dailyOrdersData
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching analytics data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching analytics data'
+    });
+  }
+});
+
 module.exports = router; 
