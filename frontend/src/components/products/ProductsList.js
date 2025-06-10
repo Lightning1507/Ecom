@@ -330,9 +330,14 @@ const ProductsList = () => {
   }
 
   return (
-    <div className="products-page">
-      {/* Success Message */}
-      {successMessage && (
+    <div className="products-container">
+      <div className="products-page">
+        {!searchQuery && !categoryName && (
+          <h1 className="products-title">All Products</h1>
+        )}
+        
+        {/* Success Message */}
+        {successMessage && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -519,6 +524,7 @@ const ProductsList = () => {
           </button>
         </motion.div>
       )}
+      </div>
     </div>
   );
 };

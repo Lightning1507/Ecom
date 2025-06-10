@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiUser, FiSearch, FiBell, FiLogOut, FiPackage, FiShoppingBag, FiSettings } from 'react-icons/fi';
+import { FiShoppingCart, FiUser, FiSearch, FiBell, FiLogOut, FiPackage, FiShoppingBag, FiSettings, FiStar } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { CartContext } from '../../context/CartContext';
 import SimpleNotifications from '../notifications/SimpleNotifications';
@@ -94,6 +94,10 @@ const Header = () => {
                   <Link to="/orders" className="dropdown-item">
                     <FiPackage />
                     <span>My Orders</span>
+                  </Link>
+                  <Link to="/reviews" className="dropdown-item">
+                    <FiStar />
+                    <span>My Reviews</span>
                   </Link>
                   {user.role === 'seller' && (
                     <Link to="/seller/dashboard" className="dropdown-item">

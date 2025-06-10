@@ -382,6 +382,16 @@ app.use('/api/admin', adminRoutes);
 const sellerAdminRoutes = require('./routes/seller-admin.routes');
 app.use('/api/admin', sellerAdminRoutes);
 
+// Mount customer routes
+const customerRoutes = require('./routes/customer.routes');
+app.use('/api/customer', customerRoutes);
+
+// Mount test routes (development only)
+if (process.env.NODE_ENV !== 'production') {
+  const testRoutes = require('./routes/test.routes');
+  app.use('/api/test', testRoutes);
+}
+
 // Create seller profile
 app.post('/api/sellers/profile', authenticateUser, async (req, res) => {
   try {

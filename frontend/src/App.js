@@ -31,6 +31,7 @@ import OrdersManagement from './components/admin/OrdersManagement';
 import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import ReviewsManagement from './components/admin/ReviewsManagement';
 import Settings from './components/admin/Settings';
+import CustomerReviews from './components/customer/CustomerReviews';
 import './App.css';
 
 function App() {
@@ -96,6 +97,11 @@ function App() {
                 <Route path="/orders" element={
                   <ProtectedRoute>
                     <Orders />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reviews" element={
+                  <ProtectedRoute>
+                    <CustomerReviews />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={
