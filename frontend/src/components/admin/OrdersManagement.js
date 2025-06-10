@@ -21,6 +21,7 @@ const OrdersManagement = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -49,6 +50,7 @@ const OrdersManagement = () => {
       const queryParams = new URLSearchParams({
         search: searchTerm,
         status: statusFilter,
+        paymentStatus: paymentStatusFilter,
         date: dateFilter,
         sort: `${sortBy}-${sortOrder}`,
         limit: '100' // Get more orders for better filtering experience
@@ -75,7 +77,7 @@ const OrdersManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL, getAuthToken, searchTerm, statusFilter, dateFilter, sortBy, sortOrder]);
+  }, [API_BASE_URL, getAuthToken, searchTerm, statusFilter, paymentStatusFilter, dateFilter, sortBy, sortOrder]);
 
   // Load orders on component mount and when filters change
   useEffect(() => {
@@ -105,6 +107,7 @@ const OrdersManagement = () => {
   const handleReset = () => {
     setSearchTerm('');
     setStatusFilter('all');
+    setPaymentStatusFilter('all');
     setDateFilter('all');
     setSortBy('date');
     setSortOrder('desc');
@@ -275,6 +278,20 @@ const OrdersManagement = () => {
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Payment:</label>
+            <select 
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            >
+              <option value="all">All Payments</option>
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
             </select>
           </div>
 

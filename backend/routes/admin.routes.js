@@ -420,7 +420,7 @@ router.get('/dashboard/stats', auth, adminAuth, async (req, res) => {
 // Get all orders for admin
 router.get('/orders', auth, adminAuth, async (req, res) => {
   try {
-    const { search = '', status = 'all', date = 'all', sort = 'date-desc', limit = '50' } = req.query;
+    const { search = '', status = 'all', paymentStatus = 'all', date = 'all', sort = 'date-desc', limit = '50' } = req.query;
     
     let whereConditions = [];
     let params = [];
@@ -441,6 +441,13 @@ router.get('/orders', auth, adminAuth, async (req, res) => {
     if (status && status !== 'all') {
       whereConditions.push(`o.status = $${paramIndex}`);
       params.push(status);
+      paramIndex++;
+    }
+
+    // Add payment status filter
+    if (paymentStatus && paymentStatus !== 'all') {
+      whereConditions.push(`p.status = $${paramIndex}`);
+      params.push(paymentStatus);
       paramIndex++;
     }
 
