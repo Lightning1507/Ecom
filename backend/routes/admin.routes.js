@@ -314,4 +314,410 @@ router.get('/users/:userId', auth, adminAuth, async (req, res) => {
   }
 });
 
+// Get admin dashboard stats
+router.get('/dashboard/stats', auth, adminAuth, async (req, res) => {
+  try {
+    // Execute all queries in parallel
+    const [
+      totalUsersResult,
+      totalSellersResult,
+      totalOrdersResult,
+      totalRevenueResult,
+      activeListingsResult,
+      pendingReviewsResult,
+      recentOrdersResult
+    ] = await Promise.all([
+      // Total users count
+      pool.query('SELECT COUNT(*) FROM Users'),
+      
+      // Total sellers count
+      pool.query(`
+        SELECT COUNT(*) 
+        FROM Users 
+        WHERE role = 'seller' AND locked = false
+      `),
+      
+      // Total orders count
+      pool.query('SELECT COUNT(*) FROM Orders'),
+      
+      // Total revenue (sum of all completed payments)
+      pool.query(`
+        SELECT COALESCE(SUM(amount), 0) as total_revenue
+        FROM Payments 
+        WHERE status = 'completed'
+      `),
+      
+      // Active listings count
+      pool.query(`
+        SELECT COUNT(*) 
+        FROM Products 
+        WHERE visible = true AND stock > 0
+      `),
+      
+      // Pending reviews count (orders that are delivered but not reviewed)
+      pool.query(`
+        SELECT COUNT(DISTINCT o.order_id) 
+        FROM Orders o
+        LEFT JOIN Reviews r ON o.order_id = r.order_id
+        WHERE o.status = 'delivered' AND r.review_id IS NULL
+      `),
+      
+      // Recent orders
+      pool.query(`
+        SELECT 
+          o.order_id,
+          u.full_name as customer_name,
+          p.amount,
+          o.status,
+          o.order_date
+        FROM Orders o
+        JOIN Users u ON o.user_id = u.user_id
+        JOIN Payments p ON o.order_id = p.order_id
+        ORDER BY o.order_date DESC
+        LIMIT 10
+      `)
+    ]);
+
+    // Extract the results
+    const totalUsers = parseInt(totalUsersResult.rows[0].count);
+    const totalSellers = parseInt(totalSellersResult.rows[0].count);
+    const totalOrders = parseInt(totalOrdersResult.rows[0].count);
+    const totalRevenue = parseFloat(totalRevenueResult.rows[0].total_revenue) || 0;
+    const activeListings = parseInt(activeListingsResult.rows[0].count);
+    const pendingReviews = parseInt(pendingReviewsResult.rows[0].count);
+    
+    // Format recent orders
+    const recentOrders = recentOrdersResult.rows.map(order => ({
+      id: order.order_id.toString(),
+      customer: order.customer_name || 'Unknown Customer',
+      amount: parseFloat(order.amount),
+      status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+      date: order.order_date
+    }));
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers,
+        totalSellers,
+        totalOrders,
+        totalRevenue,
+        activeListings,
+        pendingReviews
+      },
+      recentOrders
+    });
+
+  } catch (error) {
+    console.error('Error fetching admin dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching dashboard statistics'
+    });
+  }
+});
+
+// Get all orders for admin
+router.get('/orders', auth, adminAuth, async (req, res) => {
+  try {
+    const { search = '', status = 'all', date = 'all', sort = 'date-desc', limit = '50' } = req.query;
+    
+    let whereConditions = [];
+    let params = [];
+    let paramIndex = 1;
+
+    // Add search filter
+    if (search) {
+      whereConditions.push(`(
+        o.order_id::text ILIKE $${paramIndex} OR 
+        u.full_name ILIKE $${paramIndex} OR 
+        o.tracking_number ILIKE $${paramIndex}
+      )`);
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    // Add status filter
+    if (status && status !== 'all') {
+      whereConditions.push(`o.status = $${paramIndex}`);
+      params.push(status);
+      paramIndex++;
+    }
+
+    // Add date filter
+    if (date && date !== 'all') {
+      let dateCondition = '';
+      switch (date) {
+        case 'today':
+          dateCondition = `o.order_date >= CURRENT_DATE`;
+          break;
+        case 'yesterday':
+          dateCondition = `o.order_date >= CURRENT_DATE - INTERVAL '1 day' AND o.order_date < CURRENT_DATE`;
+          break;
+        case 'week':
+          dateCondition = `o.order_date >= CURRENT_DATE - INTERVAL '7 days'`;
+          break;
+        case 'month':
+          dateCondition = `o.order_date >= CURRENT_DATE - INTERVAL '30 days'`;
+          break;
+      }
+      if (dateCondition) {
+        whereConditions.push(dateCondition);
+      }
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // Sort logic
+    let orderClause = 'ORDER BY o.order_date DESC';
+    if (sort) {
+      const [sortField, sortOrder] = sort.split('-');
+      switch (sortField) {
+        case 'date':
+          orderClause = `ORDER BY o.order_date ${sortOrder.toUpperCase()}`;
+          break;
+        case 'total':
+          orderClause = `ORDER BY p.amount ${sortOrder.toUpperCase()}`;
+          break;
+        case 'items':
+          orderClause = `ORDER BY item_count ${sortOrder.toUpperCase()}`;
+          break;
+      }
+    }
+
+    const query = `
+      SELECT 
+        o.order_id,
+        'ORD-' || o.order_id as id,
+        u.full_name as customer,
+        o.order_date as date,
+        COUNT(oi.product_id) as items,
+        p.amount as total,
+        o.status,
+        p.status as paymentStatus,
+        o.tracking_number
+      FROM Orders o
+      JOIN Users u ON o.user_id = u.user_id
+      LEFT JOIN Payments p ON o.order_id = p.order_id
+      LEFT JOIN Order_items oi ON o.order_id = oi.order_id
+      ${whereClause}
+      GROUP BY o.order_id, u.full_name, o.order_date, p.amount, o.status, p.status, o.tracking_number
+      ${orderClause}
+      LIMIT $${paramIndex}
+    `;
+
+    params.push(parseInt(limit));
+    const result = await pool.query(query, params);
+
+    const orders = result.rows.map(row => ({
+      orderId: row.order_id,
+      id: row.id,
+      customer: row.customer || 'Unknown Customer',
+      date: row.date,
+      items: parseInt(row.items) || 0,
+      total: parseFloat(row.total) || 0,
+      status: row.status || 'pending',
+      paymentStatus: row.paymentstatus || 'pending',
+      trackingNumber: row.tracking_number
+    }));
+
+    res.json({
+      success: true,
+      orders
+    });
+
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching orders'
+    });
+  }
+});
+
+// Get single order details for admin
+router.get('/orders/:orderId', auth, adminAuth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const orderQuery = `
+      SELECT 
+        o.order_id,
+        'ORD-' || o.order_id as id,
+        o.order_date as date,
+        o.status,
+        o.tracking_number,
+        u.full_name as customer_name,
+        u.email as customer_email,
+        u.phone as customer_phone,
+        u.address as customer_address,
+        p.amount as payment_amount,
+        p.status as payment_status,
+        p.payment_method,
+        su.company_name as shipping_company
+      FROM Orders o
+      JOIN Users u ON o.user_id = u.user_id
+      LEFT JOIN Payments p ON o.order_id = p.order_id
+      LEFT JOIN Shipping_units su ON o.shipping_units_id = su.shipping_units_id
+      WHERE o.order_id = $1
+    `;
+
+    const itemsQuery = `
+      SELECT 
+        pr.name,
+        oi.quantity,
+        oi.price,
+        (oi.quantity * oi.price) as total
+      FROM Order_items oi
+      JOIN Products pr ON oi.product_id = pr.product_id
+      WHERE oi.order_id = $1
+    `;
+
+    const [orderResult, itemsResult] = await Promise.all([
+      pool.query(orderQuery, [orderId]),
+      pool.query(itemsQuery, [orderId])
+    ]);
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    const orderData = orderResult.rows[0];
+    const items = itemsResult.rows.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: parseFloat(item.price),
+      total: parseFloat(item.total)
+    }));
+
+    const order = {
+      id: orderData.id,
+      date: orderData.date,
+      status: orderData.status,
+      customer: {
+        name: orderData.customer_name,
+        email: orderData.customer_email,
+        phone: orderData.customer_phone,
+        address: orderData.customer_address
+      },
+      payment: {
+        amount: parseFloat(orderData.payment_amount) || 0,
+        status: orderData.payment_status,
+        method: orderData.payment_method
+      },
+      shipping: {
+        trackingNumber: orderData.tracking_number,
+        company: orderData.shipping_company,
+        status: orderData.shipping_status
+      },
+      items
+    };
+
+    res.json({
+      success: true,
+      order
+    });
+
+  } catch (error) {
+    console.error('Error fetching order details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching order details'
+    });
+  }
+});
+
+// Update order status
+router.put('/orders/:orderId/status', auth, adminAuth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status provided'
+      });
+    }
+
+    const result = await pool.query(
+      'UPDATE Orders SET status = $1 WHERE order_id = $2 RETURNING *',
+      [status, orderId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Order status updated successfully',
+      order: {
+        id: result.rows[0].order_id,
+        status: result.rows[0].status
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating order status'
+    });
+  }
+});
+
+// Update payment status
+router.put('/orders/:orderId/payment-status', auth, adminAuth, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { paymentStatus } = req.body;
+
+    // Validate payment status
+    const validStatuses = ['pending', 'completed', 'failed', 'refunded'];
+    if (!validStatuses.includes(paymentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment status provided'
+      });
+    }
+
+    const result = await pool.query(
+      'UPDATE Payments SET status = $1 WHERE order_id = $2 RETURNING *',
+      [paymentStatus, orderId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found for this order'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment status updated successfully',
+      payment: {
+        orderId: parseInt(orderId),
+        status: result.rows[0].status
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating payment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating payment status'
+    });
+  }
+});
+
 module.exports = router; 

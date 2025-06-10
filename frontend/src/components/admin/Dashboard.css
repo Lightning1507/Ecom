@@ -39,12 +39,12 @@
   color: white;
 }
 
-.stat-icon.users { background-color: var(--color-primary); }
-.stat-icon.sellers { background-color: var(--color-success); }
-.stat-icon.orders { background-color: var(--color-info); }
-.stat-icon.revenue { background-color: var(--color-warning); }
-.stat-icon.listings { background-color: var(--color-secondary); }
-.stat-icon.reviews { background-color: var(--color-danger); }
+.stat-icon.users { background-color: #3b82f6; }
+.stat-icon.sellers { background-color: #10b981; }
+.stat-icon.orders { background-color: #06b6d4; }
+.stat-icon.revenue { background-color: #f59e0b; }
+.stat-icon.listings { background-color: #8b5cf6; }
+.stat-icon.reviews { background-color: #ef4444; }
 
 .stat-details h3 {
   font-size: 0.875rem;
@@ -102,18 +102,18 @@
 }
 
 .status-badge.completed {
-  background-color: var(--color-success-50);
-  color: var(--color-success);
+  background-color: #dcfce7;
+  color: #16a34a;
 }
 
 .status-badge.processing {
-  background-color: var(--color-warning-50);
-  color: var(--color-warning);
+  background-color: #fef3c7;
+  color: #d97706;
 }
 
 .status-badge.pending {
-  background-color: var(--color-info-50);
-  color: var(--color-info);
+  background-color: #dbeafe;
+  color: #2563eb;
 }
 
 @media (max-width: 768px) {
@@ -139,4 +139,40 @@
   .stat-details p {
     font-size: 1.25rem;
   }
+}
+
+/* Loading and Error States */
+.loading-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.loading-state h2, .error-state h2 {
+  color: var(--color-gray-700);
+  margin-bottom: 1rem;
+}
+
+.error-state p {
+  color: var(--color-gray-600);
+  margin-bottom: 1.5rem;
+  max-width: 400px;
+}
+
+.retry-button {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-button:hover {
+  background-color: #2563eb;
 } 

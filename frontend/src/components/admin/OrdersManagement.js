@@ -143,6 +143,39 @@ const OrdersManagement = () => {
     }
   };
 
+  const handlePaymentStatusUpdate = async (orderId, newPaymentStatus) => {
+    try {
+      const token = getAuthToken();
+      const orderIdNum = orderId.replace('ORD-', ''); // Remove prefix for API
+
+      const response = await fetch(`${API_BASE_URL}/api/admin/orders/${orderIdNum}/payment-status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ paymentStatus: newPaymentStatus })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update the payment status in the local state
+        setOrders(orders.map(order => {
+          if (order.orderId === parseInt(orderIdNum)) {
+            return { ...order, paymentStatus: newPaymentStatus };
+          }
+          return order;
+        }));
+      } else {
+        alert(data.message || 'Failed to update payment status');
+      }
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      alert('Failed to update payment status');
+    }
+  };
+
   const handleViewOrder = async (orderId) => {
     try {
       const token = getAuthToken();
@@ -326,9 +359,22 @@ const OrdersManagement = () => {
                       </span>
                     </td>
                     <td>
-                      <span className={`payment-badge ${order.paymentStatus}`}>
-                        {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-                      </span>
+                      <div className="payment-status-container">
+                        <span className={`payment-badge ${order.paymentStatus}`}>
+                          {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                        </span>
+                        <select
+                          className="payment-status-update"
+                          value={order.paymentStatus}
+                          onChange={(e) => handlePaymentStatusUpdate(order.id, e.target.value)}
+                          title="Update payment status"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                          <option value="failed">Failed</option>
+                          <option value="refunded">Refunded</option>
+                        </select>
+                      </div>
                     </td>
                     <td>
                       <div className="action-buttons">
