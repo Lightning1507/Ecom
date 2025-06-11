@@ -675,6 +675,17 @@ app.post('/api/sellers/profile', authenticateUser, async (req, res) => {
   }
 });
 
+// Import shipper dependencies
+const shipperAuth = require('./middleware/shipperAuth');
+const shipperController = require('./controllers/shipper.controller');
+
+// Shipper routes
+app.get('/api/shipper/dashboard', authenticateUser, shipperAuth, shipperController.getShipperDashboard);
+app.get('/api/shipper/orders', authenticateUser, shipperAuth, shipperController.getShipperOrders);
+app.put('/api/shipper/orders/:orderId/status', authenticateUser, shipperAuth, shipperController.updateShippingStatus);
+app.get('/api/shipper/profile', authenticateUser, shipperAuth, shipperController.getShipperProfile);
+app.put('/api/shipper/profile', authenticateUser, shipperAuth, shipperController.updateShipperProfile);
+
 // Middleware and routes setup
 
 app.listen(PORT, () => {

@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiUser, FiSearch, FiLogOut, FiPackage, FiShoppingBag, FiSettings, FiStar } from 'react-icons/fi';
+import { FiShoppingCart, FiUser, FiSearch, FiLogOut, FiPackage, FiShoppingBag, FiSettings, FiStar, FiTruck } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { CartContext } from '../../context/CartContext';
 import './Header.css';
@@ -97,6 +97,12 @@ const Header = () => {
                     <Link to="/seller/dashboard" className="dropdown-item">
                       <FiShoppingBag />
                       <span>Seller Dashboard</span>
+                    </Link>
+                  )}
+                  {user.role === 'shipper' && (
+                    <Link to="/shipper/dashboard" className="dropdown-item">
+                      <FiTruck />
+                      <span>Shipper Dashboard</span>
                     </Link>
                   )}
                   {user.role === 'admin' && (

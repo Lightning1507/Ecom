@@ -35,6 +35,12 @@ import Settings from './components/admin/Settings';
 import CustomerReviews from './components/customer/CustomerReviews';
 import Shops from './components/shops/Shops';
 import ShopDetail from './components/shops/ShopDetail';
+import ShipperDashboard from './components/shipper/ShipperDashboard';
+import ShipperDashboardContent from './components/shipper/Dashboard';
+import ShipperOrderManagement from './components/shipper/OrderManagement';
+import ShipperDeliveryRoutes from './components/shipper/DeliveryRoutes';
+import ShipperAnalyticsContent from './components/shipper/ShipperAnalytics';
+import ShipperProfileContent from './components/shipper/ShipperProfile';
 import './App.css';
 
 function App() {
@@ -67,6 +73,19 @@ function App() {
                 <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/shops" element={<Shops />} />
                 <Route path="/shops/:id" element={<ShopDetail />} />
+                
+                {/* Shipper Routes */}
+                <Route path="/shipper" element={
+                  <ProtectedRoute roles={['shipper']}>
+                    <ShipperDashboard />
+                  </ProtectedRoute>
+                }>
+                  <Route path="dashboard" element={<ShipperDashboardContent />} />
+                  <Route path="orders" element={<ShipperOrderManagement />} />
+                  <Route path="routes" element={<ShipperDeliveryRoutes />} />
+                  <Route path="analytics" element={<ShipperAnalyticsContent />} />
+                  <Route path="profile" element={<ShipperProfileContent />} />
+                </Route>
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={
