@@ -63,6 +63,7 @@ const Header = () => {
         <nav className="header-nav">
           <Link to="/products" className="nav-link">Products</Link>
           <Link to="/categories" className="nav-link">Categories</Link>
+          <Link to="/shops" className="nav-link">Shops</Link>
         </nav>
 
         {/* Right Actions */}

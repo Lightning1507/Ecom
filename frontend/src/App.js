@@ -33,6 +33,8 @@ import AnalyticsDashboard from './components/admin/AnalyticsDashboard';
 import ReviewsManagement from './components/admin/ReviewsManagement';
 import Settings from './components/admin/Settings';
 import CustomerReviews from './components/customer/CustomerReviews';
+import Shops from './components/shops/Shops';
+import ShopDetail from './components/shops/ShopDetail';
 import './App.css';
 
 function App() {
@@ -63,6 +65,8 @@ function App() {
                 <Route path="/category/:id" element={<ProductsList />} />
                 <Route path="/products" element={<ProductsList />} />
                 <Route path="/products/:id" element={<ProductDetail />} />
+                <Route path="/shops" element={<Shops />} />
+                <Route path="/shops/:id" element={<ShopDetail />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={

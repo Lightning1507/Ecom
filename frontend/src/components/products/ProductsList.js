@@ -13,6 +13,7 @@ const ProductsList = () => {
   const { id: categoryId } = useParams();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
+  const sellerFilter = searchParams.get('seller') || '';
   const navigate = useNavigate();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -30,6 +31,7 @@ const ProductsList = () => {
   const [error, setError] = useState(null);
   const [filterChangeKey, setFilterChangeKey] = useState(0); // For triggering animations
   const [categoryName, setCategoryName] = useState(null);
+  const [shopName, setShopName] = useState(null);
   const [addingToCart, setAddingToCart] = useState(new Set());
   const [successMessage, setSuccessMessage] = useState('');
   
@@ -115,6 +117,43 @@ const ProductsList = () => {
     fetchCategoryName();
   }, [categoryId]);
 
+  // Fetch shop name if seller filter is provided
+  useEffect(() => {
+    const fetchShopName = async () => {
+      if (sellerFilter) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/shops`, {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          }).catch(async () => {
+            return await fetch('/api/shops', {
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+          });
+
+          if (response && response.ok) {
+            const data = await response.json();
+            const shop = data.shops?.find(shop => shop.id === parseInt(sellerFilter));
+            if (shop) {
+              setShopName(shop.name);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching shop:', err);
+        }
+      } else {
+        setShopName(null);
+      }
+    };
+
+    fetchShopName();
+  }, [sellerFilter]);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -178,7 +217,8 @@ const ProductsList = () => {
           total_sold: parseInt(product.total_sold, 10) || 0, // Include total sold count
           category: product.category || 'uncategorized', // Include category from API
           brand: product.brand || 'Unknown Brand', // Include brand from API
-          categories: product.categories || [] // Include full categories array
+          categories: product.categories || [], // Include full categories array
+          seller_id: product.seller_id // Include seller_id for filtering
         }));
 
         setProducts(transformedProducts);
@@ -196,10 +236,18 @@ const ProductsList = () => {
   // Trigger animation when filters change
   useEffect(() => {
     setFilterChangeKey(prev => prev + 1);
-  }, [filters, searchQuery]);
+  }, [filters, searchQuery, sellerFilter]);
 
   const filterProducts = (products) => {
     return products.filter(product => {
+      // Seller filter - filter by seller ID from URL params
+      if (sellerFilter) {
+        // Check if the product's seller ID matches the filter
+        if (product.seller_id !== parseInt(sellerFilter) && product.seller_id !== sellerFilter) {
+          return false;
+        }
+      }
+
       // Search filter - check name, description, brand, and category
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -284,20 +332,25 @@ const ProductsList = () => {
 
   // Debug: Log current filtering state
   useEffect(() => {
-    if (categoryId && products.length > 0) {
-      console.log('=== CATEGORY FILTERING DEBUG ===');
+    if ((categoryId || sellerFilter) && products.length > 0) {
+      console.log('=== FILTERING DEBUG ===');
       console.log('Category ID from URL:', categoryId);
+      console.log('Seller Filter from URL:', sellerFilter);
       console.log('Category Name:', categoryName);
+      console.log('Shop Name:', shopName);
       console.log('Current filter.category:', filters.category);
       console.log('Total products:', products.length);
       console.log('Filtered products:', filteredAndSortedProducts.length);
-      console.log('Sample product categories:', products.slice(0, 3).map(p => ({
-        name: p.name,
-        category: p.category,
-        categories: p.categories
-      })));
+      
+      if (sellerFilter) {
+        console.log('Products with seller IDs:', products.slice(0, 5).map(p => ({
+          name: p.name,
+          seller_id: p.seller_id
+        })));
+        console.log('Looking for seller_id:', sellerFilter, 'Type:', typeof sellerFilter);
+      }
     }
-  }, [categoryId, categoryName, filters.category, products, filteredAndSortedProducts]);
+  }, [categoryId, sellerFilter, categoryName, shopName, filters.category, products, filteredAndSortedProducts]);
 
   if (loading) {
     return (
@@ -340,7 +393,7 @@ const ProductsList = () => {
   return (
     <div className="products-container">
       <div className="products-page">
-        {!searchQuery && !categoryName && (
+        {!searchQuery && !categoryName && !sellerFilter && (
           <h1 className="products-title">All Products</h1>
         )}
         
@@ -393,10 +446,18 @@ const ProductsList = () => {
       )}
 
       {/* Show category header if viewing a specific category */}
-      {categoryName && !searchQuery && (
+      {categoryName && !searchQuery && !sellerFilter && (
         <div className="category-results-header">
           <h2>{categoryName}</h2>
           <p>{filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} in this category</p>
+        </div>
+      )}
+
+      {/* Show shop header if viewing a specific shop */}
+      {shopName && sellerFilter && !searchQuery && (
+        <div className="shop-results-header">
+          <h2>🏪 {shopName}</h2>
+          <p>{filteredAndSortedProducts.length} product{filteredAndSortedProducts.length !== 1 ? 's' : ''} from this shop</p>
         </div>
       )}
 

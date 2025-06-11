@@ -235,6 +235,25 @@
   min-width: 20px;
 }
 
+/* Shop Link Styling */
+.product-detail .shop-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: 0.5rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.product-detail .shop-link:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+  color: #0056b3;
+  text-decoration: underline;
+  transform: translateY(-1px);
+}
+
 /* Stock Status */
 .product-detail .stock-status {
   margin: 1rem 0;

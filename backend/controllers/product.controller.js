@@ -169,6 +169,7 @@ exports.getAllProducts = async (req, res) => {
         price: parseFloat(product.price),
         stock: parseInt(product.stock),
         img_path: product.img_path,
+        seller_id: product.seller_id, // Include seller_id for filtering
         brand: product.brand || 'Unknown Brand', // store name as brand
         categories: categories, // array of {category_id, name}
         category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase

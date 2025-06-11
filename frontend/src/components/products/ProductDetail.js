@@ -178,7 +178,19 @@ const ProductDetail = () => {
               </div>
               <div className="detail-item">
                 <span className="detail-icon">🏭</span>
-                <span><strong>Store:</strong> {product.store_name || 'Unknown Store'}</span>
+                <span><strong>Shop:</strong> 
+                  {product.seller_id ? (
+                    <Link 
+                      to={`/shops/${product.seller_id}`} 
+                      className="shop-link"
+                      title="Visit shop page"
+                    >
+                      {product.store_name || 'Unknown Shop'}
+                    </Link>
+                  ) : (
+                    <span>{product.store_name || 'Unknown Shop'}</span>
+                  )}
+                </span>
               </div>
               <div className="detail-item">
                 <span className="detail-icon">👤</span>
