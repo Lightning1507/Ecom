@@ -12,7 +12,8 @@ const Product = ({ product }) => {
     price,
     img_path,
     stock,
-    rating = 4.5, // Default rating if not provided
+    rating, // Real rating from database
+    total_sold, // Total units sold
   } = product;
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -57,10 +58,15 @@ const Product = ({ product }) => {
           {[...Array(5)].map((_, index) => (
             <FaStar
               key={index}
-              className={index < Math.floor(rating) ? 'star-filled' : 'star-empty'}
+              className={index < Math.floor(rating || 0) ? 'star-filled' : 'star-empty'}
             />
           ))}
-          <span className="rating-value">({rating})</span>
+          <span className="rating-value">
+            ({rating ? rating.toFixed(1) : 'No reviews yet'})
+          </span>
+        </div>
+        <div className="product-sold">
+          <span className="sold-count">{total_sold || 0} sold</span>
         </div>
         <p className="product-description">{description}</p>
         <div className="product-footer">

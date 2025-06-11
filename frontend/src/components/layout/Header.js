@@ -1,16 +1,14 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiUser, FiSearch, FiBell, FiLogOut, FiPackage, FiShoppingBag, FiSettings, FiStar } from 'react-icons/fi';
+import { FiShoppingCart, FiUser, FiSearch, FiLogOut, FiPackage, FiShoppingBag, FiSettings, FiStar } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { CartContext } from '../../context/CartContext';
-import SimpleNotifications from '../notifications/SimpleNotifications';
 import './Header.css';
 
 const Header = () => {
   const { user, logout } = useContext(AuthContext);
   const { cartCount } = useContext(CartContext);
   const navigate = useNavigate();
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = () => {
@@ -18,9 +16,7 @@ const Header = () => {
     navigate('/login');
   };
 
-  const toggleNotifications = () => {
-    setIsNotificationsOpen(!isNotificationsOpen);
-  };
+
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -73,10 +69,7 @@ const Header = () => {
         <div className="header-right">
           {user ? (
             <>
-              <button className="header-icon-btn" onClick={toggleNotifications}>
-                <FiBell />
-                <span className="notification-badge">3</span>
-              </button>
+
               <Link to="/cart" className="header-icon-btn">
                 <FiShoppingCart />
                 {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
@@ -127,10 +120,7 @@ const Header = () => {
         </div>
       </div>
 
-      <SimpleNotifications 
-        isOpen={isNotificationsOpen} 
-        onClose={() => setIsNotificationsOpen(false)} 
-      />
+
     </header>
   );
 };

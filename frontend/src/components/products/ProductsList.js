@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { FiStar, FiShoppingCart } from 'react-icons/fi';
 import ProductFilter from './ProductFilter';
 import { useCart } from '../../hooks/useCart';
@@ -13,6 +13,7 @@ const ProductsList = () => {
   const { id: categoryId } = useParams();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
+  const navigate = useNavigate();
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -36,7 +37,8 @@ const ProductsList = () => {
   const { addToCart, error: cartError } = useCart();
 
   // Handle add to cart
-  const handleAddToCart = async (productId) => {
+  const handleAddToCart = async (productId, event) => {
+    event.stopPropagation(); // Prevent card click when clicking add to cart
     setAddingToCart(prev => new Set(prev).add(productId));
     
     try {
@@ -55,6 +57,11 @@ const ProductsList = () => {
         return newSet;
       });
     }
+  };
+
+  // Handle product card click
+  const handleProductClick = (productId) => {
+    navigate(`/products/${productId}`);
   };
 
   const getCloudinaryUrl = (imagePath) => {
@@ -167,7 +174,8 @@ const ProductsList = () => {
           price: parseFloat(product.price) || 0,
           img_path: getCloudinaryUrl(product.img_path),
           stock: parseInt(product.stock, 10) || 0,
-          rating: product.rating || 4.5,
+          rating: product.rating || 0,
+          total_sold: parseInt(product.total_sold, 10) || 0, // Include total sold count
           category: product.category || 'uncategorized', // Include category from API
           brand: product.brand || 'Unknown Brand', // Include brand from API
           categories: product.categories || [] // Include full categories array
@@ -440,6 +448,8 @@ const ProductsList = () => {
                 transition: { duration: 0.2 }
               }}
               layout
+              onClick={() => handleProductClick(product.id)}
+              style={{ cursor: 'pointer' }}
             >
               <div className="product-image">
                 <img src={product.img_path} alt={product.name} />
@@ -466,12 +476,15 @@ const ProductsList = () => {
                     <FiStar /> {product.rating}
                   </span>
                 </div>
+                <div className="product-sold">
+                  <span className="sold-count">{product.total_sold || 0} sold</span>
+                </div>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={`add-to-cart-button ${product.stock <= 0 ? 'disabled' : ''}`}
                   disabled={product.stock <= 0 || addingToCart.has(product.id)}
-                  onClick={() => handleAddToCart(product.id)}
+                  onClick={(event) => handleAddToCart(product.id, event)}
                 >
                   <FiShoppingCart /> 
                   {addingToCart.has(product.id) 

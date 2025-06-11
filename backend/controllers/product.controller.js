@@ -118,12 +118,23 @@ exports.createProduct = async (req, res) => {
 // Get all products
 exports.getAllProducts = async (req, res) => {
   try {
-    // Get all products with seller information
+    // Get all products with seller information, average rating, and total sold count
     const result = await pool.query(`
       SELECT 
         p.*,
         s.store_name as brand,
-        COALESCE(p.visible, true) as visible_status
+        COALESCE(p.visible, true) as visible_status,
+        COALESCE((
+          SELECT AVG(rating)::NUMERIC(3,2)
+          FROM Reviews r 
+          WHERE r.product_id = p.product_id
+        ), 0) as avg_rating,
+        COALESCE((
+          SELECT SUM(oi.quantity)
+          FROM Order_items oi
+          JOIN Orders o ON oi.order_id = o.order_id
+          WHERE oi.product_id = p.product_id AND o.status = 'delivered'
+        ), 0) as total_sold
       FROM Products p
       LEFT JOIN Sellers s ON p.seller_id = s.seller_id
       WHERE p.visible = true
@@ -161,7 +172,8 @@ exports.getAllProducts = async (req, res) => {
         brand: product.brand || 'Unknown Brand', // store name as brand
         categories: categories, // array of {category_id, name}
         category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase
-        rating: 4.5, // default rating since we don't have reviews implemented yet
+        rating: parseFloat(product.avg_rating) || 0, // real rating from reviews
+        total_sold: parseInt(product.total_sold) || 0, // total units sold
         visible: product.visible_status
       };
     });
@@ -258,7 +270,25 @@ exports.getProductById = async (req, res) => {
     const { id } = req.params;
     
     const result = await pool.query(
-      'SELECT p.*, u.username as seller_name, s.store_name FROM Products p JOIN Sellers s ON p.seller_id = s.seller_id JOIN Users u ON s.seller_id = u.user_id WHERE p.product_id = $1',
+      `SELECT 
+        p.*, 
+        u.username as seller_name, 
+        s.store_name,
+        COALESCE((
+          SELECT AVG(rating)::NUMERIC(3,2)
+          FROM Reviews r 
+          WHERE r.product_id = p.product_id
+        ), 0) as rating,
+        COALESCE((
+          SELECT SUM(oi.quantity)
+          FROM Order_items oi
+          JOIN Orders o ON oi.order_id = o.order_id
+          WHERE oi.product_id = p.product_id AND o.status = 'delivered'
+        ), 0) as total_sold
+      FROM Products p 
+      JOIN Sellers s ON p.seller_id = s.seller_id 
+      JOIN Users u ON s.seller_id = u.user_id 
+      WHERE p.product_id = $1`,
       [id]
     );
     
@@ -274,6 +304,8 @@ exports.getProductById = async (req, res) => {
     
     const product = {
       ...result.rows[0],
+      rating: parseFloat(result.rows[0].rating) || 0,
+      total_sold: parseInt(result.rows[0].total_sold) || 0,
       categories: categoriesResult.rows
     };
     
@@ -583,7 +615,18 @@ exports.searchProducts = async (req, res) => {
       SELECT DISTINCT
         p.*,
         s.store_name as brand,
-        COALESCE(p.visible, true) as visible_status
+        COALESCE(p.visible, true) as visible_status,
+        COALESCE((
+          SELECT AVG(rating)::NUMERIC(3,2)
+          FROM Reviews r 
+          WHERE r.product_id = p.product_id
+        ), 0) as avg_rating,
+        COALESCE((
+          SELECT SUM(oi.quantity)
+          FROM Order_items oi
+          JOIN Orders o ON oi.order_id = o.order_id
+          WHERE oi.product_id = p.product_id AND o.status = 'delivered'
+        ), 0) as total_sold
       FROM Products p
       LEFT JOIN Sellers s ON p.seller_id = s.seller_id
       LEFT JOIN Product_categories pc ON p.product_id = pc.product_id
@@ -637,7 +680,8 @@ exports.searchProducts = async (req, res) => {
         brand: product.brand || 'Unknown Brand', // store name as brand
         categories: categories, // array of {category_id, name}
         category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase
-        rating: 4.5, // default rating since we don't have reviews implemented yet
+        rating: parseFloat(product.avg_rating) || 0, // real rating from reviews
+        total_sold: parseInt(product.total_sold) || 0, // total units sold
         visible: product.visible_status
       };
     });

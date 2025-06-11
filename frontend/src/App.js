@@ -14,6 +14,7 @@ import ProductManagement from './components/seller/Products';
 import AddProduct from './components/products/AddProduct';
 import EditProduct from './components/products/EditProduct';
 import ProductsList from './components/products/ProductsList';
+import ProductDetail from './components/products/ProductDetail';
 import Profile from './components/Profile/Profile';
 import Cart from './components/Cart/Cart';
 import Checkout from './components/Checkout/Checkout';
@@ -61,6 +62,7 @@ function App() {
                 <Route path="/categories" element={<Category />} />
                 <Route path="/category/:id" element={<ProductsList />} />
                 <Route path="/products" element={<ProductsList />} />
+                <Route path="/products/:id" element={<ProductDetail />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={
