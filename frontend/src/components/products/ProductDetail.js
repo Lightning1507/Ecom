@@ -1,115 +1,144 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FaShoppingCart, FaStar, FaArrowLeft, FaStore, FaTag, FaBox } from 'react-icons/fa';
-import { useCart } from '../../hooks/useCart';
 import ProductReviews from './ProductReviews';
 import './ProductDetail.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const { addToCart } = useCart();
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
-        
+        const response = await fetch(`http://localhost:5000/api/products/${id}`);
         if (!response.ok) {
           throw new Error('Product not found');
         }
-        
         const data = await response.json();
-        if (data.product) {
-          setProduct(data.product);
-          setSelectedImage(data.product.img_path);
-        } else {
-          throw new Error('Product data not found');
+        if (data.success === false) {
+          throw new Error(data.message || 'Product not found');
         }
+        setProduct(data.product);
       } catch (err) {
-        console.error('Error fetching product:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) {
-      fetchProduct();
-    }
+    fetchProduct();
   }, [id]);
 
-  const handleAddToCart = async () => {
-    setIsAddingToCart(true);
-    try {
-      await addToCart(product.product_id, 1);
-    } catch (err) {
-      console.error('Error adding to cart:', err);
-    } finally {
-      setIsAddingToCart(false);
-    }
+  const handleAddToCart = () => {
+    // Add to cart logic here
+    console.log('Added to cart:', product);
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price);
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<span key={i} className="star-filled">★</span>);
+    }
+
+    if (hasHalfStar) {
+      stars.push(<span key="half" className="star-half">★</span>);
+    }
+
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(<span key={`empty-${i}`} className="star-empty">★</span>);
+    }
+
+    return stars;
+  };
+
+  const getStockStatus = (stock) => {
+    if (stock === 0) return { class: 'out-of-stock', text: 'Out of Stock' };
+    if (stock <= 5) return { class: 'low-stock', text: `Low Stock (${stock} left)` };
+    return { class: 'in-stock', text: 'In Stock' };
   };
 
   if (loading) {
     return (
-      <div className="product-detail-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading product details...</p>
+      <div className="product-detail">
+        <div className="product-detail-container">
+          <div className="product-detail-loading">
+            <div className="loading-spinner"></div>
+            <p>Loading product details...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (error || !product) {
+  if (error) {
     return (
-      <div className="product-detail-error">
-        <h2>Product not found</h2>
-        <p>{error || 'The product you are looking for does not exist.'}</p>
-        <Link to="/products" className="back-to-products">
-          <FaArrowLeft /> Back to Products
-        </Link>
+      <div className="product-detail">
+        <div className="product-detail-container">
+          <div className="product-detail-error">
+            <h2>Error</h2>
+            <p>{error}</p>
+            <Link to="/products" className="back-to-products">
+              ← Back to Products
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
+
+  if (!product) {
+    return (
+      <div className="product-detail">
+        <div className="product-detail-container">
+          <div className="product-detail-error">
+            <h2>Product Not Found</h2>
+            <p>The product you're looking for doesn't exist.</p>
+            <Link to="/products" className="back-to-products">
+              ← Back to Products
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const stockStatus = getStockStatus(product.stock);
 
   return (
     <div className="product-detail">
       <div className="product-detail-container">
         {/* Breadcrumb */}
-        <div className="breadcrumb">
+        <nav className="breadcrumb">
           <Link to="/">Home</Link>
-          <span>/</span>
+          <span>›</span>
           <Link to="/products">Products</Link>
-          <span>/</span>
+          <span>›</span>
+          {product.categories && product.categories.length > 0 && (
+            <>
+              <span>{product.categories[0].name}</span>
+              <span>›</span>
+            </>
+          )}
           <span>{product.name}</span>
-        </div>
+        </nav>
 
-        {/* Product Info Section */}
+        {/* Main Product Content */}
         <div className="product-detail-content">
           {/* Product Images */}
           <div className="product-images">
             <div className="main-image">
-              <img
-                src={selectedImage || 'https://via.placeholder.com/500'}
+              <img 
+                src={product.img_path || '/api/placeholder/500/500'} 
                 alt={product.name}
                 onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/500';
+                  e.target.src = '/api/placeholder/500/500';
                 }}
               />
             </div>
@@ -117,98 +146,86 @@ const ProductDetail = () => {
 
           {/* Product Information */}
           <div className="product-info">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h1 className="product-title">{product.name}</h1>
-              
-              {/* Rating and Reviews */}
-              <div className="product-rating-section">
-                <div className="rating-stars">
-                  {[...Array(5)].map((_, index) => (
-                    <FaStar
-                      key={index}
-                      className={index < Math.floor(product.rating || 0) ? 'star-filled' : 'star-empty'}
-                    />
-                  ))}
-                  <span className="rating-text">
-                    ({product.rating ? product.rating.toFixed(1) : '0'}) 
-                  </span>
-                </div>
+            <h1 className="product-title">{product.name}</h1>
+
+            {/* Rating Section */}
+            <div className="product-rating-section">
+              <div className="rating-stars">
+                {renderStars(product.rating || 0)}
+                <span className="rating-text">
+                  {product.rating ? product.rating.toFixed(1) : '0.0'} out of 5
+                </span>
+              </div>
+              {product.total_sold > 0 && (
                 <div className="sold-count">
-                  <span>{product.total_sold || 0} sold</span>
+                  {product.total_sold} sold
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Price */}
-              <div className="price-section">
-                <span className="current-price">{formatPrice(product.price)}</span>
+            {/* Price Section */}
+            <div className="price-section">
+              <div className="current-price">
+                {(typeof product.price === 'number' ? product.price : parseFloat(product.price || 0)).toLocaleString('vi-VN')} ₫
               </div>
+            </div>
 
-              {/* Product Details */}
-              <div className="product-details-section">
+            {/* Product Details */}
+            <div className="product-details-section">
+              <div className="detail-item">
+                <span className="detail-icon">🏷️</span>
+                <span><strong>Category:</strong> {product.categories && product.categories.length > 0 ? product.categories[0].name : 'General'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-icon">🏭</span>
+                <span><strong>Store:</strong> {product.store_name || 'Unknown Store'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-icon">👤</span>
+                <span><strong>Seller:</strong> {product.seller_name || 'Unknown Seller'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-icon">📊</span>
+                <span><strong>Stock Left:</strong> {product.stock}</span>
+              </div>
+              {product.categories && product.categories.length > 1 && (
                 <div className="detail-item">
-                  <FaStore className="detail-icon" />
-                  <span>Store: {product.store_name || 'Unknown Store'}</span>
+                  <span className="detail-icon">🎯</span>
+                  <span><strong>All Categories:</strong> {product.categories.map(cat => cat.name).join(', ')}</span>
                 </div>
-                
-                {product.categories && product.categories.length > 0 && (
-                  <div className="detail-item">
-                    <FaTag className="detail-icon" />
-                    <span>Category: {product.categories.map(cat => cat.name || cat).join(', ')}</span>
-                  </div>
-                )}
-                
-                <div className="detail-item">
-                  <FaBox className="detail-icon" />
-                  <span>Stock: {product.stock} items available</span>
-                </div>
-              </div>
+              )}
+            </div>
 
-              {/* Stock Status */}
-              <div className="stock-status">
-                {product.stock <= 0 ? (
-                  <span className="out-of-stock">Out of Stock</span>
-                ) : product.stock <= 5 ? (
-                  <span className="low-stock">Only {product.stock} left in stock!</span>
-                ) : (
-                  <span className="in-stock">In Stock</span>
-                )}
-              </div>
+            {/* Stock Status */}
+            <div className="stock-status">
+              <span className={stockStatus.class}>
+                {stockStatus.text}
+              </span>
+            </div>
 
-              {/* Add to Cart Button */}
-              <motion.button
-                className="add-to-cart-btn"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={product.stock <= 0 || isAddingToCart}
-                onClick={handleAddToCart}
-              >
-                <FaShoppingCart />
-                {isAddingToCart ? 'Adding...' : product.stock <= 0 ? 'Out of Stock' : 'Add to Cart'}
-              </motion.button>
-            </motion.div>
+            {/* Add to Cart Button */}
+            <button 
+              className="add-to-cart-btn"
+              onClick={handleAddToCart}
+              disabled={product.stock === 0 || !product.visible}
+            >
+              <span>🛒</span>
+              {product.stock === 0 ? 'Out of Stock' : !product.visible ? 'Not Available' : 'Add to Cart'}
+            </button>
           </div>
         </div>
 
-        {/* Product Description - Full Width */}
-        {product.description && (
-          <motion.div
-            className="product-description-section"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div className="description-container">
-              <h3>Product Description</h3>
-              <div className="description-content">
-                <p>{product.description}</p>
-              </div>
+        {/* Product Description */}
+        <div className="product-description-section">
+          <div className="description-container">
+            <h3>Product Description</h3>
+            <div className="description-content">
+              <p>
+                {product.description || 'No description available for this product.'}
+              </p>
             </div>
-          </motion.div>
-        )}
+          </div>
+        </div>
 
         {/* Reviews Section */}
         <div className="reviews-section">
