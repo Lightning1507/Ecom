@@ -6,6 +6,108 @@ import './Category.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
+const getCategoryIcon = (categoryName) => {
+  const icons = {
+    // English terms
+    'electronics': '💻',
+    'clothing': '👕',
+    'books': '📚',
+    'home': '🏠',
+    'kitchen': '🍳',
+    'sports': '⚽',
+    'outdoors': '🏕️',
+    'beauty': '💄',
+    'personal care': '🧴',
+    'gaming': '🎮',
+    'accessories': '🎧',
+    'toys': '🧸',
+    'automotive': '🚗',
+    'jewelry': '💍',
+    'health': '💊',
+    'fitness': '🏋️',
+    'music': '🎵',
+    'movies': '🎬',
+    'food': '🍕',
+    'beverages': '🥤',
+    
+    // Vietnamese terms
+    'điện tử': '💻',
+    'công nghệ': '💻',
+    'máy tính': '💻',
+    'laptop': '💻',
+    'điện thoại': '📱',
+    'smartphone': '📱',
+    'thời trang': '👕',
+    'quần áo': '👕',
+    'áo': '👕',
+    'quần': '👖',
+    'giày': '👟',
+    'sách': '📚',
+    'học tập': '📚',
+    'giáo dục': '📚',
+    'nhà cửa': '🏠',
+    'nội thất': '🏠',
+    'gia đình': '🏠',
+    'nhà bếp': '🍳',
+    'bếp': '🍳',
+    'nấu ăn': '🍳',
+    'thể thao': '⚽',
+    'thể dục': '🏋️',
+    'gym': '🏋️',
+    'làm đẹp': '💄',
+    'mỹ phẩm': '💄',
+    'chăm sóc': '🧴',
+    'sức khỏe': '💊',
+    'y tế': '💊',
+    'thuốc': '💊',
+    'game': '🎮',
+    'trò chơi': '🎮',
+    'phụ kiện': '🎧',
+    'đồ chơi': '🧸',
+    'ô tô': '🚗',
+    'xe hơi': '🚗',
+    'trang sức': '💍',
+    'nhẫn': '💍',
+    'âm nhạc': '🎵',
+    'nhạc': '🎵',
+    'phim': '🎬',
+    'thực phẩm': '🍕',
+    'đồ ăn': '🍕',
+    'món ăn': '🍕',
+    'đồ uống': '🥤',
+    'nước': '🥤',
+    'cafe': '☕',
+    'cà phê': '☕',
+    'trà': '🍵',
+    'bánh': '🧁',
+    'kẹo': '🍬',
+    'snack': '🍿',
+    'văn phòng phẩm': '📝',
+    'học liệu': '📚',
+    'túi xách': '👜',
+    'balo': '🎒',
+    'đồng hồ': '⌚',
+    'kính': '👓'
+  };
+  
+  const key = categoryName.toLowerCase().trim();
+  
+  // Direct match first
+  if (icons[key]) {
+    return icons[key];
+  }
+  
+  // Check if category name contains any of the keywords
+  for (const [keyword, icon] of Object.entries(icons)) {
+    if (key.includes(keyword) || keyword.includes(key)) {
+      return icon;
+    }
+  }
+  
+  // Default fallback
+  return '🛍️';
+};
+
 const Category = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [selectedFilters, setSelectedFilters] = useState({
@@ -217,8 +319,10 @@ const Category = () => {
               whileHover={{ scale: 1.03 }}
             >
               <Link to={`/category/${category.id}`} className="category-link">
-                <div className="category-image-container">
-                  <img src={category.image} alt={category.name} />
+                <div className="category-icon-container">
+                  <div className="category-icon">
+                    <span className="category-emoji">{getCategoryIcon(category.name)}</span>
+                  </div>
                   {category.featured && <span className="featured-badge">Featured</span>}
                 </div>
                 <div className="category-info">

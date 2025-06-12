@@ -223,7 +223,6 @@ exports.getCategoriesWithProductCounts = async (req, res) => {
       category_id: category.category_id,
       name: category.name,
       productCount: parseInt(category.product_count) || 0,
-      image: `https://via.placeholder.com/300/667eea/white?text=${encodeURIComponent(category.name)}`, // Placeholder with category name
       featured: Math.random() > 0.5 // Random featured status for now
     }));
     

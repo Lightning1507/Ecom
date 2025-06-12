@@ -76,6 +76,47 @@ exports.getShipperOrders = async (req, res) => {
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
+    console.log('Fetching orders for shipper ID:', shipperId);
+    console.log('Filter status:', status);
+    console.log('Pagination:', { page, limit, offset });
+
+    // First check if the user exists and has shipper role
+    const userCheck = await pool.query(
+      'SELECT user_id, role FROM Users WHERE user_id = $1',
+      [shipperId]
+    );
+
+    if (userCheck.rows.length === 0) {
+      console.log('User not found:', shipperId);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (userCheck.rows[0].role !== 'shipper') {
+      console.log('User is not a shipper:', userCheck.rows[0]);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. User is not a shipper.'
+      });
+    }
+
+    // Check if shipper exists in Shipping_units table
+    const shipperCheck = await pool.query(
+      'SELECT Shipping_units_id FROM Shipping_units WHERE Shipping_units_id = $1',
+      [shipperId]
+    );
+
+    if (shipperCheck.rows.length === 0) {
+      console.log('Shipper not found in Shipping_units table, creating entry...');
+      // Create shipper entry if it doesn't exist
+      await pool.query(
+        'INSERT INTO Shipping_units (Shipping_units_id, company_name) VALUES ($1, $2) ON CONFLICT (Shipping_units_id) DO NOTHING',
+        [shipperId, 'Default Shipping Company']
+      );
+    }
+
     let whereCondition = 'WHERE o.Shipping_units_id = $1';
     let params = [shipperId];
     
@@ -90,8 +131,12 @@ exports.getShipperOrders = async (req, res) => {
       FROM Orders o
       ${whereCondition}
     `;
+    console.log('Count query:', countQuery);
+    console.log('Count params:', params);
+    
     const countResult = await pool.query(countQuery, params);
     const total = parseInt(countResult.rows[0].total);
+    console.log('Total orders found:', total);
 
     // Get orders with pagination
     const ordersQuery = `
@@ -121,7 +166,11 @@ exports.getShipperOrders = async (req, res) => {
     `;
 
     params.push(limit, offset);
+    console.log('Orders query:', ordersQuery);
+    console.log('Orders params:', params);
+    
     const ordersResult = await pool.query(ordersQuery, params);
+    console.log('Orders found:', ordersResult.rows.length);
 
     res.json({
       success: true,
@@ -136,9 +185,12 @@ exports.getShipperOrders = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching shipper orders:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching orders'
+      message: 'Server error while fetching orders',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
