@@ -18,7 +18,7 @@ exports.getCartItems = async (req, res) => {
         p.img_path,
         p.stock
       FROM Carts c
-      INNER JOIN Sellers s ON c.seller_id = s.seller_id
+      JOIN Sellers s ON c.seller_id = s.seller_id
       LEFT JOIN Cart_items ci ON c.cart_id = ci.cart_id
       LEFT JOIN Products p ON ci.product_id = p.product_id
       WHERE c.user_id = $1 AND (p.visible = true OR p.visible IS NULL)
@@ -218,8 +218,8 @@ exports.updateCartItemQuantity = async (req, res) => {
     const cartResult = await client.query(
       `SELECT c.cart_id, p.stock 
        FROM Carts c
-       INNER JOIN Cart_items ci ON c.cart_id = ci.cart_id
-       INNER JOIN Products p ON ci.product_id = p.product_id
+       JOIN Cart_items ci ON c.cart_id = ci.cart_id
+       JOIN Products p ON ci.product_id = p.product_id
        WHERE c.user_id = $1 AND ci.product_id = $2`,
       [userId, productId]
     );
@@ -309,7 +309,7 @@ exports.removeFromCart = async (req, res) => {
     const cartResult = await client.query(
       `SELECT c.cart_id 
        FROM Carts c
-       INNER JOIN Cart_items ci ON c.cart_id = ci.cart_id
+       JOIN Cart_items ci ON c.cart_id = ci.cart_id
        WHERE c.user_id = $1 AND ci.product_id = $2`,
       [userId, productId]
     );

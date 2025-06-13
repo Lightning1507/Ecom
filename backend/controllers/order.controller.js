@@ -31,9 +31,9 @@ exports.getSellerOrders = async (req, res) => {
         p.amount as payment_amount,
         p.status as payment_status
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Users u ON o.user_id = u.user_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Users u ON o.user_id = u.user_id
       LEFT JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1
       ORDER BY o.order_date DESC
@@ -51,7 +51,7 @@ exports.getSellerOrders = async (req, res) => {
           pr.name as product_name,
           pr.img_path as product_image
         FROM Order_items oi
-        INNER JOIN Products pr ON oi.product_id = pr.product_id
+        JOIN Products pr ON oi.product_id = pr.product_id
         WHERE oi.order_id = $1 AND pr.seller_id = $2
       `;
 
@@ -114,8 +114,8 @@ exports.updateOrderStatus = async (req, res) => {
     const orderCheckQuery = `
       SELECT DISTINCT o.order_id
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
       WHERE o.order_id = $1 AND pr.seller_id = $2
     `;
 
@@ -171,9 +171,9 @@ exports.getOrderDetails = async (req, res) => {
         p.status as payment_status,
         p.payment_date
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Users u ON o.user_id = u.user_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Users u ON o.user_id = u.user_id
       LEFT JOIN Payments p ON o.order_id = p.order_id
       WHERE o.order_id = $1 AND pr.seller_id = $2
     `;
@@ -199,7 +199,7 @@ exports.getOrderDetails = async (req, res) => {
         pr.img_path as product_image,
         pr.description as product_description
       FROM Order_items oi
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Products pr ON oi.product_id = pr.product_id
       WHERE oi.order_id = $1 AND pr.seller_id = $2
     `;
 

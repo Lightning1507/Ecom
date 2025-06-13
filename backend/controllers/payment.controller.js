@@ -35,9 +35,9 @@ exports.processCheckout = async (req, res) => {
           p.price,
           p.stock
         FROM Carts c
-        INNER JOIN Sellers s ON c.seller_id = s.seller_id
-        INNER JOIN Cart_items ci ON c.cart_id = ci.cart_id
-        INNER JOIN Products p ON ci.product_id = p.product_id
+        JOIN Sellers s ON c.seller_id = s.seller_id
+        JOIN Cart_items ci ON c.cart_id = ci.cart_id
+        JOIN Products p ON ci.product_id = p.product_id
         WHERE c.user_id = $1 AND p.visible = true AND ci.product_id = ANY($2)
       `, [userId, productIds]);
 
@@ -55,9 +55,9 @@ exports.processCheckout = async (req, res) => {
           p.price,
           p.stock
         FROM Carts c
-        INNER JOIN Sellers s ON c.seller_id = s.seller_id
-        INNER JOIN Cart_items ci ON c.cart_id = ci.cart_id
-        INNER JOIN Products p ON ci.product_id = p.product_id
+        JOIN Sellers s ON c.seller_id = s.seller_id
+        JOIN Cart_items ci ON c.cart_id = ci.cart_id
+        JOIN Products p ON ci.product_id = p.product_id
         WHERE c.user_id = $1 AND p.visible = true
       `, [userId]);
 
@@ -220,9 +220,9 @@ exports.getCheckoutSummary = async (req, res) => {
         p.img_path,
         p.stock
       FROM Carts c
-      INNER JOIN Sellers s ON c.seller_id = s.seller_id
-      INNER JOIN Cart_items ci ON c.cart_id = ci.cart_id
-      INNER JOIN Products p ON ci.product_id = p.product_id
+      JOIN Sellers s ON c.seller_id = s.seller_id
+      JOIN Cart_items ci ON c.cart_id = ci.cart_id
+      JOIN Products p ON ci.product_id = p.product_id
       WHERE c.user_id = $1 AND p.visible = true
       ORDER BY s.store_name, p.name
     `, [userId]);
@@ -347,7 +347,7 @@ exports.getUserOrders = async (req, res) => {
           pr.name as product_name,
           pr.img_path as product_image
         FROM Order_items oi
-        INNER JOIN Products pr ON oi.product_id = pr.product_id
+        JOIN Products pr ON oi.product_id = pr.product_id
         WHERE oi.order_id = $1
       `;
       const itemsResult = await pool.query(itemsQuery, [order.order_id]);

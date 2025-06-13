@@ -22,8 +22,8 @@ exports.getSellerDashboardStats = async (req, res) => {
     const revenueQuery = `
       SELECT COALESCE(SUM(oi.quantity * oi.price), 0) as total_revenue
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE o.seller_id = $1 AND p.status = 'completed'
     `;
 
@@ -31,8 +31,8 @@ exports.getSellerDashboardStats = async (req, res) => {
     const ordersQuery = `
       SELECT COUNT(DISTINCT o.order_id) as total_orders
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
       WHERE pr.seller_id = $1
     `;
 
@@ -57,9 +57,9 @@ exports.getSellerDashboardStats = async (req, res) => {
           ELSE 0 
         END), 0) as last_month_revenue
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1 AND p.status = 'completed'
     `;
 
@@ -69,9 +69,9 @@ exports.getSellerDashboardStats = async (req, res) => {
         TO_CHAR(DATE_TRUNC('month', o.order_date), 'Mon') as month,
         COALESCE(SUM(oi.quantity * oi.price), 0) as sales
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1 
         AND p.status = 'completed'
         AND o.order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')
@@ -151,9 +151,9 @@ exports.getSellerRecentActivity = async (req, res) => {
         COUNT(oi.product_id) as item_count,
         SUM(oi.quantity * oi.price) as total_amount
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Users u ON o.user_id = u.user_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Users u ON o.user_id = u.user_id
       WHERE pr.seller_id = $1
       GROUP BY o.order_id, o.order_date, u.full_name, u.username
       ORDER BY o.order_date DESC
@@ -542,9 +542,9 @@ exports.getSellerAnalytics = async (req, res) => {
         TO_CHAR(DATE_TRUNC('month', o.order_date), 'Mon') as month,
         COALESCE(SUM(oi.quantity * oi.price), 0) as revenue
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1 
         AND p.status = 'completed'
         AND o.order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '${range.months - 1} months')
@@ -558,8 +558,8 @@ exports.getSellerAnalytics = async (req, res) => {
         TO_CHAR(DATE_TRUNC('month', o.order_date), 'Mon') as month,
         COUNT(DISTINCT o.order_id) as orders
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
       WHERE pr.seller_id = $1
         AND o.order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '${range.months - 1} months')
       GROUP BY DATE_TRUNC('month', o.order_date)
@@ -572,10 +572,10 @@ exports.getSellerAnalytics = async (req, res) => {
         c.name,
         COUNT(DISTINCT o.order_id) as value
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Product_categories pc ON pr.product_id = pc.product_id
-      INNER JOIN Categories c ON pc.category_id = c.category_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Product_categories pc ON pr.product_id = pc.product_id
+      JOIN Categories c ON pc.category_id = c.category_id
       WHERE pr.seller_id = $1
         AND o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months'
       GROUP BY c.category_id, c.name
@@ -590,9 +590,9 @@ exports.getSellerAnalytics = async (req, res) => {
         SUM(oi.quantity) as sales,
         SUM(oi.quantity * oi.price) as revenue
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1 
         AND p.status = 'completed'
         AND o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months'
@@ -609,9 +609,9 @@ exports.getSellerAnalytics = async (req, res) => {
         COUNT(DISTINCT o.user_id) as total_customers,
         COALESCE(AVG(oi.quantity * oi.price), 0) as avg_order_value
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1 
         AND p.status = 'completed'
         AND o.order_date >= CURRENT_DATE - INTERVAL '${range.months} months'
@@ -650,9 +650,9 @@ exports.getSellerAnalytics = async (req, res) => {
           THEN o.user_id 
         END) as previous_period_customers
       FROM Orders o
-      INNER JOIN Order_items oi ON o.order_id = oi.order_id
-      INNER JOIN Products pr ON oi.product_id = pr.product_id
-      INNER JOIN Payments p ON o.order_id = p.order_id
+      JOIN Order_items oi ON o.order_id = oi.order_id
+      JOIN Products pr ON oi.product_id = pr.product_id
+      JOIN Payments p ON o.order_id = p.order_id
       WHERE pr.seller_id = $1 AND p.status = 'completed'
     `;
 

@@ -523,7 +523,7 @@ exports.getFilterData = async (req, res) => {
     const brandsResult = await pool.query(`
       SELECT DISTINCT s.store_name 
       FROM Sellers s 
-      INNER JOIN Products p ON s.seller_id = p.seller_id 
+      JOIN Products p ON s.seller_id = p.seller_id 
       WHERE p.visible = true 
       ORDER BY s.store_name
     `);
