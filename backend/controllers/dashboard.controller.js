@@ -44,23 +44,24 @@ exports.getSellerDashboardStats = async (req, res) => {
     `;
 
     // Get revenue from last month and current month for growth calculation
+  //   SELECT 
+  //   COALESCE(SUM(CASE 
+  //     WHEN DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', CURRENT_DATE) 
+  //     THEN oi.quantity * oi.price 
+  //     ELSE 0 
+  //   END), 0) as current_month_revenue,
+  //   COALESCE(SUM(CASE 
+  //     WHEN DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') 
+  //     THEN oi.quantity * oi.price 
+  //     ELSE 0 
+  //   END), 0) as last_month_revenue
+  // FROM Orders o
+  // JOIN Order_items oi ON o.order_id = oi.order_id
+  // JOIN Products pr ON oi.product_id = pr.product_id
+  // JOIN Payments p ON o.order_id = p.order_id
+  // WHERE pr.seller_id = $1 AND p.status = 'completed'
     const growthQuery = `
-      SELECT 
-        COALESCE(SUM(CASE 
-          WHEN DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', CURRENT_DATE) 
-          THEN oi.quantity * oi.price 
-          ELSE 0 
-        END), 0) as current_month_revenue,
-        COALESCE(SUM(CASE 
-          WHEN DATE_TRUNC('month', o.order_date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') 
-          THEN oi.quantity * oi.price 
-          ELSE 0 
-        END), 0) as last_month_revenue
-      FROM Orders o
-      JOIN Order_items oi ON o.order_id = oi.order_id
-      JOIN Products pr ON oi.product_id = pr.product_id
-      JOIN Payments p ON o.order_id = p.order_id
-      WHERE pr.seller_id = $1 AND p.status = 'completed'
+      SELECT * FROM get_monthly_revenue_by_seller($1);
     `;
 
     // Get sales data for last 6 months

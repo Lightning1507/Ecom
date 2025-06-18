@@ -14,7 +14,7 @@ exports.getShipperDashboard = async (req, res) => {
         COALESCE(SUM(CASE WHEN shipping_status = 'delivered' THEN 50 ELSE 0 END), 0) as earnings,
         COALESCE(AVG(CASE WHEN shipping_status = 'delivered' THEN 45 ELSE NULL END), 0) as avg_delivery_time
       FROM Orders 
-      WHERE Shipping_units_id = $1
+      WHERE Shipping_units_id = $1  
     `;
 
     const statsResult = await pool.query(statsQuery, [shipperId]);

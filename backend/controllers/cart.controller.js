@@ -156,7 +156,7 @@ exports.addToCart = async (req, res) => {
 
     // Get updated total count
     const totalCountResult = await client.query(
-      `SELECT get_total_cart_quantity_by_user($1);`,
+      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
       [userId]
     );
 
@@ -195,9 +195,9 @@ exports.updateCartItemQuantity = async (req, res) => {
 
     await client.query('BEGIN');
 
-    // Get cart_id for this product and user
+    // Get cart_id and product stock for this product and user
     const cartResult = await client.query(
-      `SELECT * FROM get_cart_product_stock($1, $2);`,
+      `SELECT * FROM get_cart_product_stock($1, $2)`,
       [userId, productId]
     );
 
@@ -247,7 +247,7 @@ exports.updateCartItemQuantity = async (req, res) => {
 
     // Get updated total count
     const totalCountResult = await client.query(
-      `SELECT get_total_cart_quantity_by_user($1);`,
+      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
       [userId]
     );
 
@@ -281,7 +281,10 @@ exports.removeFromCart = async (req, res) => {
 
     // Get cart_id for this product and user
     const cartResult = await client.query(
-      `SELECT get_cart_id_by_user_and_product($1, $2);`,
+      `SELECT c.cart_id 
+       FROM Carts c 
+       JOIN Cart_items ci ON c.cart_id = ci.cart_id 
+       WHERE c.user_id = $1 AND ci.product_id = $2`,
       [userId, productId]
     );
 
@@ -315,7 +318,7 @@ exports.removeFromCart = async (req, res) => {
 
     // Get updated total count
     const totalCountResult = await client.query(
-      `SELECT get_total_cart_quantity_by_user($1);`,
+      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
       [userId]
     );
 
@@ -391,7 +394,7 @@ exports.getCartCount = async (req, res) => {
     const userId = req.user.id;
 
     const countResult = await pool.query(
-      `SELECT get_total_cart_quantity_by_user($1);`,
+      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
       [userId]
     );
 
