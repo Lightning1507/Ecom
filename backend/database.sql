@@ -20,10 +20,7 @@ CREATE TABLE Sellers (
     seller_id INTEGER PRIMARY KEY REFERENCES Users(user_id),
     store_name VARCHAR(100) NOT NULL,
     description TEXT,
-    qr_img_path TEXT,
-    verification_status VARCHAR(20) DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'rejected')),
-    verification_date TIMESTAMP,
-    rejection_reason TEXT
+    qr_img_path TEXT
 );
 
 ----------------------
