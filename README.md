@@ -206,7 +206,7 @@ npm start
 
 | Tính năng | Customer | Seller | Admin | Shipper |
 |-----------|----------|--------|-------|---------|
-| Mua hàng | ✅ | ❌ | ❌ | ❌ |
+| Mua hàng | ✅ | ✅ | ✅ | ✅ |
 | Bán hàng | ❌ | ✅ | ❌ | ❌ |
 | Quản lý hệ thống | ❌ | ❌ | ✅ | ❌ |
 | Giao hàng | ❌ | ❌ | ❌ | ✅ |
@@ -263,7 +263,6 @@ npm start
 
 ## 🎨 Screenshots
 
-*Thêm screenshots của các trang chính tại đây*
 
 ## 🔧 Troubleshooting
 
