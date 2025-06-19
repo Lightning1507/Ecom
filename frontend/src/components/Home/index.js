@@ -446,40 +446,7 @@ const Home = () => {
         </motion.div>
       </section>
 
-      {/* Newsletter Section */}
-      <section className="newsletter-section">
-        <motion.div
-          className="newsletter-content"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-        >
-          <div className="newsletter-icon">
-            <FiGift />
-          </div>
-          <h2>Stay in the Loop</h2>
-          <p>Subscribe to our newsletter for exclusive deals, new product launches, and special offers</p>
-          <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
-            <div className="form-group">
-              <input 
-                type="email" 
-                placeholder="Enter your email address" 
-                required 
-              />
-              <motion.button 
-                type="submit"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Subscribe <FiArrowRight />
-              </motion.button>
-            </div>
-          </form>
-          <p className="newsletter-note">
-            🎉 Get 10% off your first order when you subscribe!
-          </p>
-        </motion.div>
-      </section>
+
     </div>
   );
 };

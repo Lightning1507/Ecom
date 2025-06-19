@@ -154,7 +154,9 @@ DB_PORT=5432
 DB_NAME=ecommerce_db
 DB_USER=your_username
 DB_PASSWORD=your_password
+DATABASE_URL=postgresql://postgres:password@localhost:5432/ecom
 JWT_SECRET=your_jwt_secret_key
+CLIENT_URL=http://localhost:3000
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
@@ -164,8 +166,9 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 Tạo file `.env` trong thư mục `frontend/`:
 ```env
 REACT_APP_API_URL=http://localhost:5000
-REACT_APP_API_BASE_URL=http://localhost:5000
 REACT_APP_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+REACT_APP_CLOUDINARY_API_KEY=your_cloudinary_api_key
+REACT_APP_CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 ## 🚀 Cách chạy dự án
@@ -263,7 +266,6 @@ npm start
 
 ## 🎨 Screenshots
 
-
 ## 🔧 Troubleshooting
 
 ### Lỗi thường gặp:
@@ -307,7 +309,7 @@ npm install
 
 - **Developer**: Đặng Hoàng Quân
 - **Email**: [lightning1575@gmail.com]
-- **GitHub**: [github.com/Lightning1507]
+- **GitHub**: [https://github.com/Lightning1507]
 
 ## 🙏 Lời cảm ơn
 
