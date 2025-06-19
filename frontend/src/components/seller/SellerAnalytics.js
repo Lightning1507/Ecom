@@ -19,6 +19,16 @@ import './SellerAnalytics.css';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+// Helper function to format VND currency
+const formatVND = (amount) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
 const SellerAnalytics = () => {
   const [timeRange, setTimeRange] = useState('6m');
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -173,7 +183,7 @@ const SellerAnalytics = () => {
           </div>
           <div className="card-content">
             <h3>Total Revenue</h3>
-            <p className="card-value">${summary.totalRevenue.toLocaleString()}</p>
+            <p className="card-value">{formatVND(summary.totalRevenue)}</p>
             {formatGrowth(summary.revenueGrowth)}
           </div>
         </div>
@@ -195,7 +205,7 @@ const SellerAnalytics = () => {
           </div>
           <div className="card-content">
             <h3>Average Order Value</h3>
-            <p className="card-value">${summary.averageOrderValue.toFixed(2)}</p>
+            <p className="card-value">{formatVND(summary.averageOrderValue)}</p>
             {formatGrowth(summary.avgOrderValueGrowth)}
           </div>
         </div>
@@ -222,7 +232,7 @@ const SellerAnalytics = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+              <Tooltip formatter={(value) => [formatVND(value), 'Revenue']} />
               <Legend />
               <Line
                 type="monotone"
@@ -298,7 +308,7 @@ const SellerAnalytics = () => {
                     <tr key={index}>
                       <td>{product.name}</td>
                       <td>{product.sales}</td>
-                      <td>${product.revenue.toLocaleString()}</td>
+                      <td>{formatVND(product.revenue)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -309,7 +309,7 @@ const SellerSettings = () => {
       <h2>Shipping Settings</h2>
       <div className="settings-form">
         <div className="form-group">
-          <label>Free Shipping Threshold ($)</label>
+          <label>Free Shipping Threshold (₫)</label>
           <input
             type="number"
             value={formData.shipping.freeShippingThreshold}

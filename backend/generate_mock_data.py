@@ -242,7 +242,7 @@ def generate_mock_data():
         tracking_number = f"VN{random.randint(100000000, 999999999)}"
         shipping_status = random.choice(['preparing', 'in_transit', 'delivered', 'returned'])
         estimated_delivery = fake.date_between(start_date='today', end_date='+30d')
-        order_date = fake.date_time_between(start_date='-24m', end_date='now')
+        order_date = fake.date_time_between(start_date='-2y', end_date='now')
         status = random.choice(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
         
         if shipping_units_id:
@@ -274,7 +274,7 @@ def generate_mock_data():
     output_lines.append("-- Payments Data (SERIAL payment_id will be auto-generated)")
     
     for order_id in range(1, NUM_ORDERS + 1):  # order_ids will be 1-20000
-        payment_date = fake.date_time_between(start_date='-24m', end_date='now')
+        payment_date = fake.date_time_between(start_date='-2y', end_date='now')
         payment_method = random.choice(['cod', 'bank_transfer'])
         amount = random.randint(100000, 10000000)
         status = random.choice(['pending', 'completed', 'failed', 'refunded'])
@@ -325,8 +325,8 @@ def main():
     print("- 50 Admins")
     print("- 500 Shippers")
     print("- 15,000 Products")
-    print("- 20,000 Orders")
-    print("- ~15,000 Reviews")
+    print("- 40,000 Orders")
+    print("- ~30,000 Reviews")
     print("- ~5,000 Shopping Carts")
     print("\nThis may take a few minutes to generate...")
     

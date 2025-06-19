@@ -4,6 +4,16 @@ import { FiDollarSign, FiShoppingCart, FiPackage, FiTrendingUp } from 'react-ico
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './styles.css';
 
+// Helper function to format VND currency
+const formatVND = (amount) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
+};
+
 const StatCard = ({ icon, label, value, trend }) => (
   <motion.div
     className="stat-card"
@@ -143,7 +153,7 @@ const SellerDashboard = () => {
           <StatCard
             icon={<FiDollarSign size={24} />}
             label="Total Revenue"
-            value={'$' + stats.revenue.toLocaleString()}
+            value={formatVND(stats.revenue)}
             trend={stats.growth}
           />
           <StatCard
