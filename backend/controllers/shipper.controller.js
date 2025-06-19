@@ -5,6 +5,41 @@ exports.getShipperDashboard = async (req, res) => {
   try {
     const shipperId = req.user.id;
 
+    // First check if the user exists and has shipper role
+    const userCheck = await pool.query(
+      'SELECT user_id, role FROM Users WHERE user_id = $1',
+      [shipperId]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (userCheck.rows[0].role !== 'shipper') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. User is not a shipper.'
+      });
+    }
+
+    // Check if shipper exists in Shipping_units table
+    const shipperCheck = await pool.query(
+      'SELECT Shipping_units_id FROM Shipping_units WHERE shipping_units_id = $1',
+      [shipperId]
+    );
+
+    if (shipperCheck.rows.length === 0) {
+      console.log('Shipper not found in shipping_units table, creating entry...');
+      // Create shipper entry if it doesn't exist
+      await pool.query(
+        'INSERT INTO Shipping_units (shipping_units_id, company_name) VALUES ($1, $2) ON CONFLICT (shipping_units_id) DO NOTHING',
+        [shipperId, 'Default Shipping Company']
+      );
+    }
+
     // Get dashboard stats for this shipper
     const statsQuery = `
       SELECT 
@@ -14,7 +49,7 @@ exports.getShipperDashboard = async (req, res) => {
         COALESCE(SUM(CASE WHEN shipping_status = 'delivered' THEN 50 ELSE 0 END), 0) as earnings,
         COALESCE(AVG(CASE WHEN shipping_status = 'delivered' THEN 45 ELSE NULL END), 0) as avg_delivery_time
       FROM Orders 
-      WHERE Shipping_units_id = $1  
+      WHERE shipping_units_id = $1  
     `;
 
     const statsResult = await pool.query(statsQuery, [shipperId]);
@@ -62,9 +97,12 @@ exports.getShipperDashboard = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching shipper dashboard:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      message: 'Server error while fetching dashboard data'
+      message: 'Server error while fetching dashboard data',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

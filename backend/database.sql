@@ -27,7 +27,7 @@ CREATE TABLE Sellers (
 -- 3. Shipper Profiles
 ----------------------
 CREATE TABLE Shipping_units (
-    Shipping_units_id INTEGER PRIMARY KEY REFERENCES Users(user_id),
+    shipping_units_id INTEGER PRIMARY KEY REFERENCES Users(user_id),
     company_name VARCHAR(100)
 );
 
