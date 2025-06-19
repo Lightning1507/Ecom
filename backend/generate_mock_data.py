@@ -61,7 +61,7 @@ def generate_mock_data():
     NUM_ADMINS = 50
     NUM_SHIPPERS = 500
     NUM_PRODUCTS = 15000
-    NUM_ORDERS = 20000
+    NUM_ORDERS = 40000
     NUM_CARTS_MAX = 5000  # Max customers with carts
     
     # Calculate expected user_id ranges (SERIAL starts from 1)
@@ -242,7 +242,7 @@ def generate_mock_data():
         tracking_number = f"VN{random.randint(100000000, 999999999)}"
         shipping_status = random.choice(['preparing', 'in_transit', 'delivered', 'returned'])
         estimated_delivery = fake.date_between(start_date='today', end_date='+30d')
-        order_date = fake.date_time_between(start_date='-60d', end_date='now')
+        order_date = fake.date_time_between(start_date='-24m', end_date='now')
         status = random.choice(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
         
         if shipping_units_id:
@@ -274,7 +274,7 @@ def generate_mock_data():
     output_lines.append("-- Payments Data (SERIAL payment_id will be auto-generated)")
     
     for order_id in range(1, NUM_ORDERS + 1):  # order_ids will be 1-20000
-        payment_date = fake.date_time_between(start_date='-60d', end_date='now')
+        payment_date = fake.date_time_between(start_date='-24m', end_date='now')
         payment_method = random.choice(['cod', 'bank_transfer'])
         amount = random.randint(100000, 10000000)
         status = random.choice(['pending', 'completed', 'failed', 'refunded'])
