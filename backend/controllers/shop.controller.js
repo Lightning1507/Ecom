@@ -2,7 +2,8 @@ const pool = require('../db');
 
 const getAllShops = async (req, res) => {
   try {
-    const { page = 1, limit = 12, search = '' } = req.query;
+    const startTime = Date.now();
+    const { page = 1, limit = 9, search = '', simple = false } = req.query;
     const offset = (page - 1) * limit;
 
     let whereConditions = ['u.role = $1', 'u.locked = $2', 's.store_name IS NOT NULL'];
@@ -28,37 +29,70 @@ const getAllShops = async (req, res) => {
     const totalResult = await pool.query(countQuery, params);
     const total = parseInt(totalResult.rows[0].count);
 
-    // Get sellers with their store information
-    const sellersQuery = `
+    // Choose query based on simple mode for performance
+    let sellersQuery;
+    
+    if (simple === 'true') {
+      // Simple fast query without expensive aggregations
+      sellersQuery = `
+        SELECT 
+          u.user_id,
+          u.full_name,
+          s.store_name,
+          s.description,
+          0 as products_count,
+          0 as avg_rating,
+          0 as total_sold
+        FROM Users u 
+        JOIN Sellers s ON u.user_id = s.seller_id 
+        ${whereClause}
+        ORDER BY s.store_name
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `;
+    } else {
+      // Optimized query using JOINs instead of subqueries for better performance
+      sellersQuery = `
       SELECT 
         u.user_id,
         u.full_name,
         s.store_name,
         s.description,
-        COALESCE((
-          SELECT COUNT(*) 
-          FROM Products p 
-          WHERE p.seller_id = s.seller_id AND p.visible = true
-        ), 0) as products_count,
-        COALESCE((
-          SELECT AVG(r.rating)::NUMERIC(3,2)
-          FROM Reviews r
-          JOIN Products p ON r.product_id = p.product_id
-          WHERE p.seller_id = s.seller_id
-        ), 0) as avg_rating,
-        COALESCE((
-          SELECT SUM(oi.quantity) 
-          FROM Order_items oi
-          JOIN Orders o ON oi.order_id = o.order_id
-          JOIN Products p ON oi.product_id = p.product_id
-          WHERE p.seller_id = s.seller_id AND o.status = 'delivered'
-        ), 0) as total_sold
+        COALESCE(product_stats.products_count, 0) as products_count,
+        COALESCE(rating_stats.avg_rating, 0) as avg_rating,
+        COALESCE(sales_stats.total_sold, 0) as total_sold
       FROM Users u 
       JOIN Sellers s ON u.user_id = s.seller_id 
+      LEFT JOIN (
+        SELECT 
+          p.seller_id, 
+          COUNT(*) as products_count
+        FROM Products p 
+        WHERE p.visible = true
+        GROUP BY p.seller_id
+      ) product_stats ON s.seller_id = product_stats.seller_id
+      LEFT JOIN (
+        SELECT 
+          p.seller_id,
+          AVG(r.rating)::NUMERIC(3,2) as avg_rating
+        FROM Products p
+        JOIN Reviews r ON p.product_id = r.product_id
+        GROUP BY p.seller_id
+      ) rating_stats ON s.seller_id = rating_stats.seller_id
+      LEFT JOIN (
+        SELECT 
+          p.seller_id,
+          SUM(oi.quantity) as total_sold
+        FROM Products p
+        JOIN Order_items oi ON p.product_id = oi.product_id
+        JOIN Orders o ON oi.order_id = o.order_id
+        WHERE o.status = 'delivered'
+        GROUP BY p.seller_id
+      ) sales_stats ON s.seller_id = sales_stats.seller_id
       ${whereClause}
       ORDER BY products_count DESC, avg_rating DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
+    }
     
     params.push(limit, offset);
     const sellersResult = await pool.query(sellersQuery, params);
@@ -74,6 +108,9 @@ const getAllShops = async (req, res) => {
       totalSold: parseInt(seller.total_sold) || 0,
       status: 'active'
     }));
+
+    const endTime = Date.now();
+    console.log(`Shop query took ${endTime - startTime}ms for ${shops.length} shops (page ${page}, simple: ${simple})`);
 
     res.json({
       success: true,

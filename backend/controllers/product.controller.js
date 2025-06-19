@@ -115,10 +115,24 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// Get all products
+// Get all products with pagination
 exports.getAllProducts = async (req, res) => {
   try {
-    // Get all products with seller information, average rating, and total sold count
+    // Parse pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12; // Default 12 products per page
+    const offset = (page - 1) * limit;
+    
+    // Get total count first
+    const countResult = await pool.query(`
+      SELECT COUNT(*) as total
+      FROM Products p
+      WHERE p.visible = true
+    `);
+    const totalProducts = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(totalProducts / limit);
+    
+    // Get products with pagination
     const result = await pool.query(`
       SELECT 
         p.*,
@@ -139,7 +153,8 @@ exports.getAllProducts = async (req, res) => {
       LEFT JOIN Sellers s ON p.seller_id = s.seller_id
       WHERE p.visible = true
       ORDER BY p.product_id DESC
-    `);
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
     
     // Fetch categories for all products in one query
     const productIds = result.rows.map(product => product.product_id);
@@ -179,7 +194,17 @@ exports.getAllProducts = async (req, res) => {
       };
     });
     
-    res.json({ products });
+    res.json({ 
+      products,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalProducts,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        limit
+      }
+    });
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Server error' });

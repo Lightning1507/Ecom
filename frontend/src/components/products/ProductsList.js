@@ -35,6 +35,13 @@ const ProductsList = () => {
   const [addingToCart, setAddingToCart] = useState(new Set());
   const [successMessage, setSuccessMessage] = useState('');
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [productsPerPage] = useState(12);
+  const [loadingMore, setLoadingMore] = useState(false);
+  
   // Cart functionality
   const { addToCart, error: cartError } = useCart();
 
@@ -154,83 +161,104 @@ const ProductsList = () => {
     fetchShopName();
   }, [sellerFilter]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        console.log('Fetching products...');
-        // Try direct URL first
-        const response = await fetch(`${API_BASE_URL}/api/products`, {
+  // Fetch products with pagination
+  const fetchProducts = async (page = 1, append = false) => {
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+      
+      console.log(`Fetching products page ${page}...`);
+      const url = `${API_BASE_URL}/api/products?page=${page}&limit=${productsPerPage}`;
+      
+      // Try direct URL first
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      }).catch(async () => {
+        console.log('Direct fetch failed, trying proxy...');
+        // If direct fetch fails, try with proxy
+        return await fetch(`/api/products?page=${page}&limit=${productsPerPage}`, {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           }
-        }).catch(async () => {
-          console.log('Direct fetch failed, trying proxy...');
-          // If direct fetch fails, try with proxy
-          return await fetch('/api/products', {
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            }
-          });
         });
+      });
 
-        if (!response) {
-          throw new Error('Network response was not ok');
-        }
-
-        console.log('Response status:', response.status);
-        
-        if (response.status === 404) {
-          throw new Error('API endpoint not found. Please check if the backend server is running.');
-        }
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Received non-JSON response from server');
-        }
-
-        const data = await response.json();
-        console.log('Response data:', data);
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch products');
-        }
-
-        // Handle both array and object responses
-        const productsData = Array.isArray(data) ? data : data.products;
-        
-        if (!Array.isArray(productsData)) {
-          console.error('Invalid products data:', data);
-          throw new Error('Invalid products data received');
-        }
-
-        // Transform the data to match the Product component's expected format
-        const transformedProducts = productsData.map(product => ({
-          id: product.product_id || product.id,
-          name: product.name || 'Unnamed Product',
-          description: product.description || '',
-          price: parseFloat(product.price) || 0,
-          img_path: getCloudinaryUrl(product.img_path),
-          stock: parseInt(product.stock, 10) || 0,
-          rating: product.rating || 0,
-          total_sold: parseInt(product.total_sold, 10) || 0, // Include total sold count
-          category: product.category || 'uncategorized', // Include category from API
-          brand: product.brand || 'Unknown Brand', // Include brand from API
-          categories: product.categories || [], // Include full categories array
-          seller_id: product.seller_id // Include seller_id for filtering
-        }));
-
-        setProducts(transformedProducts);
-      } catch (err) {
-        console.error('Error fetching products:', err);
-        setError(err.message || 'An error occurred while fetching products');
-      } finally {
-        setLoading(false);
+      if (!response) {
+        throw new Error('Network response was not ok');
       }
-    };
 
-    fetchProducts();
+      console.log('Response status:', response.status);
+      
+      if (response.status === 404) {
+        throw new Error('API endpoint not found. Please check if the backend server is running.');
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Received non-JSON response from server');
+      }
+
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch products');
+      }
+
+      // Handle pagination response
+      const productsData = data.products || [];
+      const pagination = data.pagination || {};
+      
+      if (!Array.isArray(productsData)) {
+        console.error('Invalid products data:', data);
+        throw new Error('Invalid products data received');
+      }
+
+      // Transform the data to match the Product component's expected format
+      const transformedProducts = productsData.map(product => ({
+        id: product.product_id || product.id,
+        name: product.name || 'Unnamed Product',
+        description: product.description || '',
+        price: parseFloat(product.price) || 0,
+        img_path: getCloudinaryUrl(product.img_path),
+        stock: parseInt(product.stock, 10) || 0,
+        rating: product.rating || 0,
+        total_sold: parseInt(product.total_sold, 10) || 0, // Include total sold count
+        category: product.category || 'uncategorized', // Include category from API
+        brand: product.brand || 'Unknown Brand', // Include brand from API
+        categories: product.categories || [], // Include full categories array
+        seller_id: product.seller_id // Include seller_id for filtering
+      }));
+
+      if (append) {
+        setProducts(prev => [...prev, ...transformedProducts]);
+      } else {
+        setProducts(transformedProducts);
+      }
+      
+      // Update pagination state
+      setCurrentPage(pagination.currentPage || page);
+      setTotalPages(pagination.totalPages || 1);
+      setTotalProducts(pagination.totalProducts || transformedProducts.length);
+      
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError(err.message || 'An error occurred while fetching products');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts(1);
   }, []);
 
   // Trigger animation when filters change
@@ -328,7 +356,11 @@ const ProductsList = () => {
     }
   };
 
-  const filteredAndSortedProducts = sortProducts(filterProducts(products));
+  // For the main products page (no search/category/seller filter), use server-side pagination
+  // For filtered views, use client-side filtering
+  const filteredAndSortedProducts = (searchQuery || categoryId || sellerFilter) 
+    ? sortProducts(filterProducts(products))
+    : products;
 
   // Debug: Log current filtering state
   useEffect(() => {
@@ -475,7 +507,11 @@ const ProductsList = () => {
           animate={{ opacity: 1, y: 0 }}
           className="results-count"
         >
-          {!searchQuery && !categoryName && `${filteredAndSortedProducts.length} product${filteredAndSortedProducts.length !== 1 ? 's' : ''} found`}
+          {!searchQuery && !categoryName && !sellerFilter && (
+            totalProducts > 0 
+              ? `Showing ${products.length} of ${totalProducts} products`
+              : `${filteredAndSortedProducts.length} product${filteredAndSortedProducts.length !== 1 ? 's' : ''} found`
+          )}
         </motion.p>
       </div>
 
@@ -597,6 +633,60 @@ const ProductsList = () => {
             {searchQuery ? 'View All Products' : 'Clear All Filters'}
           </button>
         </motion.div>
+      )}
+
+      {/* Pagination Controls */}
+      {!searchQuery && !categoryId && !sellerFilter && totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            <p>
+              Showing {products.length} of {totalProducts} products
+            </p>
+          </div>
+          
+          {/* Load More Button */}
+          {currentPage < totalPages && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="load-more-button"
+              onClick={() => fetchProducts(currentPage + 1, true)}
+              disabled={loadingMore}
+            >
+              {loadingMore ? 'Loading...' : 'Load More Products'}
+            </motion.button>
+          )}
+
+          {/* Page Numbers */}
+          <div className="pagination-numbers">
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  className={`page-button ${currentPage === pageNum ? 'active' : ''}`}
+                  onClick={() => {
+                    setCurrentPage(pageNum);
+                    fetchProducts(pageNum);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
       </div>
     </div>

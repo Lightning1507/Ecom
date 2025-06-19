@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -17,28 +17,50 @@ const Shops = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
-  const [page, setPage] = useState(1);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalShops, setTotalShops] = useState(0);
+  const [shopsPerPage] = useState(9);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  const fetchShops = useCallback(async (searchQuery = '', pageNum = 1) => {
+  // Debounce search to avoid too many API calls
+  const debouncedSearchTerm = useMemo(() => {
+    const timer = setTimeout(() => searchTerm, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchShops = useCallback(async (searchQuery = '', pageNum = 1, append = false) => {
     try {
-      setLoading(true);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       
       const queryParams = new URLSearchParams({
         page: pageNum,
-        limit: 12,
-        search: searchQuery
+        limit: shopsPerPage,
+        search: searchQuery,
+        simple: 'true' // Use simple mode for faster loading
       });
 
       const response = await fetch(`${API_BASE_URL}/api/shops?${queryParams}`);
       const data = await response.json();
 
       if (data.success) {
-        setShops(data.shops);
+        if (append) {
+          setShops(prev => [...prev, ...data.shops]);
+        } else {
+          setShops(data.shops);
+        }
+        setCurrentPage(data.pagination.page);
         setTotalPages(data.pagination.pages);
+        setTotalShops(data.pagination.total);
       } else {
         setError(data.message || 'Failed to fetch shops');
       }
@@ -47,8 +69,9 @@ const Shops = () => {
       setError('Failed to load shops. Please try again.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [API_BASE_URL]);
+  }, [API_BASE_URL, shopsPerPage]);
 
   useEffect(() => {
     fetchShops();
@@ -56,12 +79,12 @@ const Shops = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setPage(1);
+    setCurrentPage(1);
     fetchShops(searchTerm, 1);
   };
 
   const handlePageChange = (newPage) => {
-    setPage(newPage);
+    setCurrentPage(newPage);
     fetchShops(searchTerm, newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -83,9 +106,25 @@ const Shops = () => {
     return stars;
   };
 
-  if (loading) {
+  if (loading && shops.length === 0) {
     return (
       <div className="shops-page">
+        {/* Header Section */}
+        <div className="shops-header">
+          <motion.div
+            className="header-content"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1>
+              <FiShoppingBag className="header-icon" />
+              Discover Amazing Shops
+            </h1>
+            <p>Browse through our collection of verified sellers and find the perfect products</p>
+          </motion.div>
+        </div>
+
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>Loading shops...</p>
@@ -190,22 +229,22 @@ const Shops = () => {
                 <div className="shop-stats">
                   <div className="stat">
                     <FiShoppingBag className="stat-icon" />
-                    <span className="stat-value">{shop.productsCount}</span>
+                    <span className="stat-value">-</span>
                     <span className="stat-label">Products</span>
                   </div>
                   <div className="stat">
                     <FiTrendingUp className="stat-icon" />
-                    <span className="stat-value">{shop.totalSold}</span>
+                    <span className="stat-value">-</span>
                     <span className="stat-label">Sold</span>
                   </div>
                 </div>
 
                 <div className="shop-rating">
                   <div className="stars">
-                    {renderStars(shop.rating)}
+                    {renderStars(0)}
                   </div>
                   <span className="rating-text">
-                    {shop.rating > 0 ? `${shop.rating.toFixed(1)} stars` : 'No ratings yet'}
+                    View shop for details
                   </span>
                 </div>
 
@@ -246,32 +285,78 @@ const Shops = () => {
         )}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="pagination">
+      {/* Pagination Controls */}
+      {!searchTerm && totalPages > 1 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            <p>
+              Showing {shops.length} of {totalShops} shops
+            </p>
+          </div>
+          
+          {/* Load More Button */}
+          {currentPage < totalPages && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="load-more-button"
+              onClick={() => fetchShops(searchTerm, currentPage + 1, true)}
+              disabled={loadingMore}
+            >
+              {loadingMore ? 'Loading...' : 'Load More Shops'}
+            </motion.button>
+          )}
+
+          {/* Page Numbers */}
+          <div className="pagination-numbers">
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  className={`page-button ${currentPage === pageNum ? 'active' : ''}`}
+                  onClick={() => {
+                    setCurrentPage(pageNum);
+                    fetchShops(searchTerm, pageNum);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Simple pagination for search results */}
+      {searchTerm && totalPages > 1 && (
+        <div className="simple-pagination">
           <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
             className="pagination-btn"
           >
             Previous
           </button>
           
-          <div className="pagination-numbers">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <button
-                key={pageNum}
-                onClick={() => handlePageChange(pageNum)}
-                className={`pagination-number ${page === pageNum ? 'active' : ''}`}
-              >
-                {pageNum}
-              </button>
-            ))}
-          </div>
+          <span className="page-info">
+            Page {currentPage} of {totalPages}
+          </span>
 
           <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
             className="pagination-btn"
           >
             Next
