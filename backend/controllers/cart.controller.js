@@ -7,8 +7,25 @@ exports.getCartItems = async (req, res) => {
 
     // Get all carts for the user with their items
     const cartItemsQuery = `
-      SELECT * FROM getCartItems($1);
-    `;
+      SELECT 
+      c.cart_id,
+      c.seller_id,
+      s.store_name,
+      ci.product_id,
+      ci.quantity,
+      p.name AS product_name,
+      p.price,
+      p.img_path,
+      p.stock
+    FROM Carts c
+    JOIN Sellers s ON c.seller_id = s.seller_id
+    LEFT JOIN Cart_items ci ON c.cart_id = ci.cart_id
+    LEFT JOIN Products p ON ci.product_id = p.product_id
+    WHERE c.user_id = $1 
+      AND (p.visible = true OR p.visible IS NULL)
+    ORDER BY s.store_name, p.name;
+
+`;
 
     const result = await pool.query(cartItemsQuery, [userId]);
 
@@ -156,7 +173,10 @@ exports.addToCart = async (req, res) => {
 
     // Get updated total count
     const totalCountResult = await client.query(
-      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
+      `SELECT COALESCE(SUM(ci.quantity), 0) as total_count
+      FROM Carts c
+      JOIN Cart_items ci ON c.cart_id = ci.cart_id
+      WHERE c.user_id = $1`,
       [userId]
     );
 
@@ -197,7 +217,11 @@ exports.updateCartItemQuantity = async (req, res) => {
 
     // Get cart_id and product stock for this product and user
     const cartResult = await client.query(
-      `SELECT * FROM get_cart_product_stock($1, $2)`,
+      `SELECT c.cart_id, p.stock
+      FROM Carts c
+      JOIN Cart_items ci ON c.cart_id = ci.cart_id
+      JOIN Products p ON ci.product_id = p.product_id
+      WHERE c.user_id = $1 AND ci.product_id = $2`,
       [userId, productId]
     );
 
@@ -247,7 +271,10 @@ exports.updateCartItemQuantity = async (req, res) => {
 
     // Get updated total count
     const totalCountResult = await client.query(
-      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
+      `SELECT COALESCE(SUM(ci.quantity), 0) as total_count
+      FROM Carts c
+      JOIN Cart_items ci ON c.cart_id = ci.cart_id
+      WHERE c.user_id = $1`,
       [userId]
     );
 
@@ -318,7 +345,10 @@ exports.removeFromCart = async (req, res) => {
 
     // Get updated total count
     const totalCountResult = await client.query(
-      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
+      `SELECT COALESCE(SUM(ci.quantity), 0) as total_count
+      FROM Carts c
+      JOIN Cart_items ci ON c.cart_id = ci.cart_id
+      WHERE c.user_id = $1`,
       [userId]
     );
 
@@ -394,7 +424,10 @@ exports.getCartCount = async (req, res) => {
     const userId = req.user.id;
 
     const countResult = await pool.query(
-      `SELECT get_total_cart_quantity_by_user($1) as total_count`,
+      `SELECT COALESCE(SUM(ci.quantity), 0) as total_count
+      FROM Carts c
+      JOIN Cart_items ci ON c.cart_id = ci.cart_id
+      WHERE c.user_id = $1`,
       [userId]
     );
 
