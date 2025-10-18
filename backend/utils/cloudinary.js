@@ -1,4 +1,89 @@
-const { cloudinary } = require('../config/cloudinary');
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Tạo thư mục uploads nếu chưa tồn tại
+const uploadDir = 'uploads/products/';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer for local storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
+// Hàm upload file từ đường dẫn lên Cloudinary
+const uploadToCloudinary = async (filePath) => {
+  try {
+    console.log('Uploading file to Cloudinary from path:', filePath);
+    
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File not found: ' + filePath);
+    }
+
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: 'ecommerce/products',
+      resource_type: 'image',
+      transformation: [
+        {
+          width: 800,
+          height: 800,
+           crop: 'fill', 
+          gravity: 'auto', 
+          quality: 'auto:good'
+        }
+      ]
+    });
+
+    console.log('Cloudinary upload successful:', result.secure_url);
+
+    // Xóa file tạm sau khi upload thành công
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    return {
+      url: result.secure_url,
+      public_id: result.public_id
+    };
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    // Xóa file tạm nếu có lỗi
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    throw new Error(`Cloudinary upload failed: ${error.message}`);
+  }
+};
 
 /**
  * Extract public ID from Cloudinary URL
@@ -92,6 +177,9 @@ const deleteImage = async (imageUrl) => {
   }
 };
 
+// Alias for deleteFromCloudinary (để tương thích với controller)
+const deleteFromCloudinary = deleteImage;
+
 /**
  * Delete multiple images from Cloudinary
  * @param {string[]} imageUrls - Array of Cloudinary image URLs
@@ -114,7 +202,11 @@ const deleteImages = async (imageUrls) => {
 };
 
 module.exports = {
+  cloudinary,
+  upload,
+  uploadToCloudinary,
+  deleteFromCloudinary,
   extractPublicId,
   deleteImage,
   deleteImages
-}; 
+};

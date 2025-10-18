@@ -72,3 +72,4 @@ router.get('/debug', (req, res) => {
 router.get('/debug/categories', productController.debugProductCategories);
 
 module.exports = router;
+

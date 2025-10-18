@@ -1,108 +1,142 @@
-const {Pool} = require('pg');
-const pool = require('../db');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
+const { Pool } = require("pg");
+const pool = require("../db");
 
+// Debug: Kiểm tra import cloudinary
+console.log("=== DEBUG CLOUDINARY IMPORT ===");
+let uploadToCloudinary, deleteFromCloudinary;
+
+try {
+  const cloudinaryModule = require("../utils/cloudinary");
+  console.log("Cloudinary module loaded successfully");
+  console.log("Exports from cloudinary:", Object.keys(cloudinaryModule));
+
+  uploadToCloudinary = cloudinaryModule.uploadToCloudinary;
+  deleteFromCloudinary = cloudinaryModule.deleteFromCloudinary;
+
+  console.log("uploadToCloudinary type:", typeof uploadToCloudinary);
+  console.log("deleteFromCloudinary type:", typeof deleteFromCloudinary);
+
+  if (typeof uploadToCloudinary !== "function") {
+    throw new Error("uploadToCloudinary is not a function");
+  }
+} catch (error) {
+  console.error("ERROR importing cloudinary functions:", error.message);
+  // Fallback: tạo hàm tạm thời
+  uploadToCloudinary = async (filePath) => {
+    console.log("Using fallback upload function for:", filePath);
+    return { url: "/fallback-image.jpg", public_id: "fallback" };
+  };
+  deleteFromCloudinary = async (publicId) => {
+    console.log("Using fallback delete function for:", publicId);
+    return { result: "ok" };
+  };
+}
+console.log("=== END DEBUG ===");
+
+// const {Pool} = require('pg');
+// const pool = require('../db');
+// const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
 // Create a new product
 exports.createProduct = async (req, res) => {
   let cloudinaryResult = null;
   try {
-    console.log('Request body:', req.body);
-    console.log('Uploaded file:', req.file);
-    
+    console.log("Request body:", req.body);
+    console.log("Uploaded file:", req.file);
+
     const { name, description, price, stock } = req.body;
     let categories = req.body.categories;
-    
+
     // Parse categories if it's an array in string format
-    if (typeof categories === 'string' && categories.startsWith('[')) {
+    if (typeof categories === "string" && categories.startsWith("[")) {
       try {
         categories = JSON.parse(categories);
       } catch (e) {
-        console.error('Failed to parse categories:', e);
+        console.error("Failed to parse categories:", e);
       }
-    } else if (req.body['categories[]']) {
-      categories = Array.isArray(req.body['categories[]']) 
-        ? req.body['categories[]'] 
-        : [req.body['categories[]']];
+    } else if (req.body["categories[]"]) {
+      categories = Array.isArray(req.body["categories[]"])
+        ? req.body["categories[]"]
+        : [req.body["categories[]"]];
     }
-    
+
     const userId = req.user.id; // From auth middleware
-    
+
     // Start a transaction
     const client = await pool.connect();
     try {
-      await client.query('BEGIN');
-      
+      await client.query("BEGIN");
+
       // Check if seller exists
       const sellerResult = await client.query(
-        'SELECT seller_id FROM Sellers WHERE seller_id = $1',
+        "SELECT seller_id FROM Sellers WHERE seller_id = $1",
         [userId]
       );
-      
+
       if (sellerResult.rows.length === 0) {
-        throw new Error('Seller profile not found. Please complete your seller profile first.');
+        throw new Error(
+          "Seller profile not found. Please complete your seller profile first."
+        );
       }
-      
+
       const sellerId = sellerResult.rows[0].seller_id;
-      
-      // Upload image to Cloudinary if provided
+
       if (req.file) {
         try {
-          cloudinaryResult = await uploadToCloudinary(req.file);
+          cloudinaryResult = await uploadToCloudinary(req.file.path);
           console.log('Cloudinary upload result:', cloudinaryResult);
         } catch (uploadError) {
           console.error('Failed to upload image:', uploadError);
           throw new Error('Failed to upload image');
         }
       }
-      
       // Insert the product
       const productResult = await client.query(
-        'INSERT INTO Products (seller_id, name, description, img_path, price, stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING product_id',
+        "INSERT INTO Products (seller_id, name, description, img_path, price, stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING product_id",
         [
           sellerId,
           name,
           description,
           cloudinaryResult ? cloudinaryResult.url : null,
           price,
-          stock
+          stock,
         ]
       );
-      
+
       const productId = productResult.rows[0].product_id;
-      
+
       // Add product categories if provided
       if (categories && categories.length > 0) {
         for (const categoryId of categories) {
           await client.query(
-            'INSERT INTO Product_categories (product_id, category_id) VALUES ($1, $2)',
+            "INSERT INTO Product_categories (product_id, category_id) VALUES ($1, $2)",
             [productId, categoryId]
           );
         }
       }
-      
-      await client.query('COMMIT');
-      
-      res.status(201).json({ 
-        success: true, 
-        message: 'Product created successfully',
+
+      await client.query("COMMIT");
+
+      res.status(201).json({
+        success: true,
+        message: "Product created successfully",
         product: {
           product_id: productId,
           name,
           description,
           price,
           stock,
-          img_path: cloudinaryResult ? cloudinaryResult.url : null
-        }
+          img_path: cloudinaryResult ? cloudinaryResult.url : null,
+        },
       });
     } catch (err) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       // If upload succeeded but database failed, clean up the uploaded image
       if (cloudinaryResult && cloudinaryResult.public_id) {
         try {
           await deleteFromCloudinary(cloudinaryResult.public_id);
         } catch (deleteError) {
-          console.error('Failed to delete image after rollback:', deleteError);
+          console.error("Failed to delete image after rollback:", deleteError);
         }
       }
       throw err;
@@ -110,8 +144,10 @@ exports.createProduct = async (req, res) => {
       client.release();
     }
   } catch (err) {
-    console.error('Create product error:', err.message);
-    res.status(500).json({ success: false, message: err.message || 'Server error' });
+    console.error("Create product error:", err.message);
+    res
+      .status(500)
+      .json({ success: false, message: err.message || "Server error" });
   }
 };
 
@@ -122,7 +158,7 @@ exports.getAllProducts = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12; // Default 12 products per page
     const offset = (page - 1) * limit;
-    
+
     // Get total count first
     const countResult = await pool.query(`
       SELECT COUNT(*) as total
@@ -131,9 +167,10 @@ exports.getAllProducts = async (req, res) => {
     `);
     const totalProducts = parseInt(countResult.rows[0].total);
     const totalPages = Math.ceil(totalProducts / limit);
-    
+
     // Get products with pagination
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT 
         p.*,
         s.store_name as brand,
@@ -154,10 +191,12 @@ exports.getAllProducts = async (req, res) => {
       WHERE p.visible = true
       ORDER BY p.product_id DESC
       LIMIT $1 OFFSET $2
-    `, [limit, offset]);
-    
+    `,
+      [limit, offset]
+    );
+
     // Fetch categories for all products in one query
-    const productIds = result.rows.map(product => product.product_id);
+    const productIds = result.rows.map((product) => product.product_id);
     let categoriesMap = {};
     if (productIds.length > 0) {
       const categoriesResult = await pool.query(
@@ -167,14 +206,17 @@ exports.getAllProducts = async (req, res) => {
         [productIds]
       );
       // Map product_id to array of categories
-      categoriesResult.rows.forEach(row => {
+      categoriesResult.rows.forEach((row) => {
         if (!categoriesMap[row.product_id]) categoriesMap[row.product_id] = [];
-        categoriesMap[row.product_id].push({ category_id: row.category_id, name: row.name });
+        categoriesMap[row.product_id].push({
+          category_id: row.category_id,
+          name: row.name,
+        });
       });
     }
-    
+
     // Transform the data to match the frontend's expected format
-    const products = result.rows.map(product => {
+    const products = result.rows.map((product) => {
       const categories = categoriesMap[product.product_id] || [];
       return {
         product_id: product.product_id,
@@ -185,16 +227,19 @@ exports.getAllProducts = async (req, res) => {
         stock: parseInt(product.stock),
         img_path: product.img_path,
         seller_id: product.seller_id, // Include seller_id for filtering
-        brand: product.brand || 'Unknown Brand', // store name as brand
+        brand: product.brand || "Unknown Brand", // store name as brand
         categories: categories, // array of {category_id, name}
-        category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase
+        category:
+          categories.length > 0
+            ? categories[0].name.toLowerCase()
+            : "uncategorized", // first category name in lowercase
         rating: parseFloat(product.avg_rating) || 0, // real rating from reviews
         total_sold: parseInt(product.total_sold) || 0, // total units sold
-        visible: product.visible_status
+        visible: product.visible_status,
       };
     });
-    
-    res.json({ 
+
+    res.json({
       products,
       pagination: {
         currentPage: page,
@@ -202,37 +247,37 @@ exports.getAllProducts = async (req, res) => {
         totalProducts,
         hasNextPage: page < totalPages,
         hasPreviousPage: page > 1,
-        limit
-      }
+        limit,
+      },
     });
   } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching products:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Get seller's products
 exports.getSellerProducts = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     // First check if seller exists
     const sellerResult = await pool.query(
-      'SELECT seller_id, store_name FROM Sellers WHERE seller_id = $1',
+      "SELECT seller_id, store_name FROM Sellers WHERE seller_id = $1",
       [userId]
     );
-    
+
     if (sellerResult.rows.length === 0) {
-      return res.json({ 
+      return res.json({
         products: [],
-        message: 'Seller profile not found. Please complete your seller profile first.'
+        message:
+          "Seller profile not found. Please complete your seller profile first.",
       });
     }
-    
+
     const sellerId = sellerResult.rows[0].seller_id;
     const storeName = sellerResult.rows[0].store_name;
-    
+
     const result = await pool.query(
       `SELECT 
         p.*,
@@ -245,9 +290,9 @@ exports.getSellerProducts = async (req, res) => {
       ORDER BY p.product_id DESC`,
       [sellerId]
     );
-    
+
     // Fetch categories for all products in one query
-    const productIds = result.rows.map(product => product.product_id);
+    const productIds = result.rows.map((product) => product.product_id);
     let categoriesMap = {};
     if (productIds.length > 0) {
       const categoriesResult = await pool.query(
@@ -257,14 +302,17 @@ exports.getSellerProducts = async (req, res) => {
         [productIds]
       );
       // Map product_id to array of categories
-      categoriesResult.rows.forEach(row => {
+      categoriesResult.rows.forEach((row) => {
         if (!categoriesMap[row.product_id]) categoriesMap[row.product_id] = [];
-        categoriesMap[row.product_id].push({ category_id: row.category_id, name: row.name });
+        categoriesMap[row.product_id].push({
+          category_id: row.category_id,
+          name: row.name,
+        });
       });
     }
-    
+
     // Transform the data to match the frontend's expected format
-    const products = result.rows.map(product => {
+    const products = result.rows.map((product) => {
       const categories = categoriesMap[product.product_id] || [];
       return {
         id: product.product_id,
@@ -272,21 +320,21 @@ exports.getSellerProducts = async (req, res) => {
         description: product.description,
         price: parseFloat(product.price),
         stock: parseInt(product.stock),
-        status: product.visible ? 'active' : 'inactive',
+        status: product.visible ? "active" : "inactive",
         featured: false,
         rating: 0,
         sales: 0,
         seller: storeName,
         img_path: product.img_path,
         categories: categories, // array of {category_id, name}
-        category: categories.length > 0 ? categories[0].name : 'Uncategorized' // first category name or 'Uncategorized'
+        category: categories.length > 0 ? categories[0].name : "Uncategorized", // first category name or 'Uncategorized'
       };
     });
-    
+
     res.json({ products });
   } catch (err) {
-    console.error('Error in getSellerProducts:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Error in getSellerProducts:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -294,7 +342,7 @@ exports.getSellerProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const result = await pool.query(
       `SELECT 
         p.*, 
@@ -317,31 +365,34 @@ exports.getProductById = async (req, res) => {
       WHERE p.product_id = $1`,
       [id]
     );
-    
+
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
-    
+
     // Get product categories
     const categoriesResult = await pool.query(
-      'SELECT c.category_id, c.name FROM Categories c JOIN Product_categories pc ON c.category_id = pc.category_id WHERE pc.product_id = $1',
+      "SELECT c.category_id, c.name FROM Categories c JOIN Product_categories pc ON c.category_id = pc.category_id WHERE pc.product_id = $1",
       [id]
     );
-    
+
     const product = {
       ...result.rows[0],
       rating: parseFloat(result.rows[0].rating) || 0,
       total_sold: parseInt(result.rows[0].total_sold) || 0,
-      categories: categoriesResult.rows
+      categories: categoriesResult.rows,
     };
-    
+
     res.json({ product });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
+// Update product
 // Update product
 exports.updateProduct = async (req, res) => {
   let cloudinaryResult = null;
@@ -385,7 +436,7 @@ exports.updateProduct = async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // Upload new image to Cloudinary if provided
+      // Upload new image to Cloudinary if provided - SỬA PHẦN NÀY
       if (req.file) {
         try {
           // Delete old image if it exists and has a public_id
@@ -398,8 +449,8 @@ exports.updateProduct = async (req, res) => {
             }
           }
           
-          // Upload new image
-          cloudinaryResult = await uploadToCloudinary(req.file);
+          // Upload new image - SỬA DÒNG NÀY
+          cloudinaryResult = await uploadToCloudinary(req.file.path); // Sửa từ req.file thành req.file.path
           console.log('Cloudinary upload result:', cloudinaryResult);
         } catch (uploadError) {
           console.error('Failed to upload/delete image:', uploadError);
@@ -484,57 +535,54 @@ exports.deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const sellerId = req.user.id;
-    
+
     // Check if product exists and belongs to seller
     const productCheck = await pool.query(
-      'SELECT * FROM Products WHERE product_id = $1 AND seller_id = $2',
+      "SELECT * FROM Products WHERE product_id = $1 AND seller_id = $2",
       [id, sellerId]
     );
-    
+
     if (productCheck.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Product not found or you don\'t have permission to delete it' 
+      return res.status(404).json({
+        success: false,
+        message: "Product not found or you don't have permission to delete it",
       });
     }
 
     const product = productCheck.rows[0];
-    
+
     // Delete image from Cloudinary if it exists
-    if (product.img_path && product.img_path.includes('cloudinary')) {
+    if (product.img_path && product.img_path.includes("cloudinary")) {
       try {
-        const publicId = product.img_path.split('/').pop().split('.')[0];
+        const publicId = product.img_path.split("/").pop().split(".")[0];
         await deleteFromCloudinary(publicId);
       } catch (deleteError) {
-        console.error('Failed to delete image from Cloudinary:', deleteError);
+        console.error("Failed to delete image from Cloudinary:", deleteError);
         // Continue with product deletion even if image deletion fails
       }
     }
-    
+
     // Delete product
-    await pool.query(
-      'DELETE FROM Products WHERE product_id = $1',
-      [id]
-    );
-    
-    res.json({ 
-      success: true, 
-      message: 'Product deleted successfully' 
+    await pool.query("DELETE FROM Products WHERE product_id = $1", [id]);
+
+    res.json({
+      success: true,
+      message: "Product deleted successfully",
     });
   } catch (err) {
-    console.error('Delete product error:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Delete product error:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 // Get all categories
 exports.getAllCategories = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM Categories ORDER BY name');
+    const result = await pool.query("SELECT * FROM Categories ORDER BY name");
     res.json({ categories: result.rows });
   } catch (err) {
     console.error(err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -542,8 +590,10 @@ exports.getAllCategories = async (req, res) => {
 exports.getFilterData = async (req, res) => {
   try {
     // Get categories
-    const categoriesResult = await pool.query('SELECT * FROM Categories ORDER BY name');
-    
+    const categoriesResult = await pool.query(
+      "SELECT * FROM Categories ORDER BY name"
+    );
+
     // Get brands (store names) from sellers who have products
     const brandsResult = await pool.query(`
       SELECT DISTINCT s.store_name 
@@ -552,7 +602,7 @@ exports.getFilterData = async (req, res) => {
       WHERE p.visible = true 
       ORDER BY s.store_name
     `);
-    
+
     // Get price range data
     const priceRangeResult = await pool.query(`
       SELECT 
@@ -561,20 +611,23 @@ exports.getFilterData = async (req, res) => {
       FROM Products 
       WHERE visible = true AND price > 0
     `);
-    
+
     const filterData = {
       categories: categoriesResult.rows,
-      brands: brandsResult.rows.map(row => ({ name: row.store_name, value: row.store_name })),
+      brands: brandsResult.rows.map((row) => ({
+        name: row.store_name,
+        value: row.store_name,
+      })),
       priceRange: {
         min: priceRangeResult.rows[0]?.min_price || 0,
-        max: priceRangeResult.rows[0]?.max_price || 0
-      }
+        max: priceRangeResult.rows[0]?.max_price || 0,
+      },
     };
-    
+
     res.json(filterData);
   } catch (err) {
-    console.error('Error fetching filter data:', err.message);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Error fetching filter data:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -586,34 +639,34 @@ exports.toggleProductStatus = async (req, res) => {
 
     // Check if product exists and belongs to seller
     const productCheck = await pool.query(
-      'SELECT * FROM Products WHERE product_id = $1 AND seller_id = $2',
+      "SELECT * FROM Products WHERE product_id = $1 AND seller_id = $2",
       [id, sellerId]
     );
 
     if (productCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Product not found or you don\'t have permission to update it'
+        message: "Product not found or you don't have permission to update it",
       });
     }
 
     // Toggle the visible status
     const result = await pool.query(
-      'UPDATE Products SET visible = NOT visible WHERE product_id = $1 RETURNING *',
+      "UPDATE Products SET visible = NOT visible WHERE product_id = $1 RETURNING *",
       [id]
     );
 
     res.json({
       success: true,
-      message: 'Product status updated successfully',
+      message: "Product status updated successfully",
       product: {
         ...result.rows[0],
-        status: result.rows[0].visible ? 'active' : 'inactive'
-      }
+        status: result.rows[0].visible ? "active" : "inactive",
+      },
     });
   } catch (err) {
-    console.error('Toggle product status error:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Toggle product status error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -621,7 +674,7 @@ exports.toggleProductStatus = async (req, res) => {
 exports.toggleProductFeatured = async (req, res) => {
   res.status(400).json({
     success: false,
-    message: 'Featured status is not supported in the current database schema'
+    message: "Featured status is not supported in the current database schema",
   });
 };
 
@@ -629,15 +682,16 @@ exports.toggleProductFeatured = async (req, res) => {
 exports.searchProducts = async (req, res) => {
   try {
     const { q: query } = req.query;
-    
-    if (!query || query.trim() === '') {
-      return res.status(400).json({ message: 'Search query is required' });
+
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
     }
-    
+
     const searchTerm = `%${query.trim().toLowerCase()}%`;
-    
+
     // Search products by name, description, and category
-    const result = await pool.query(`
+    const result = await pool.query(
+      `
       SELECT DISTINCT
         p.*,
         s.store_name as brand,
@@ -673,10 +727,12 @@ exports.searchProducts = async (req, res) => {
           ELSE 5
         END,
         p.product_id DESC
-    `, [searchTerm]);
-    
+    `,
+      [searchTerm]
+    );
+
     // Fetch categories for all products in one query
-    const productIds = result.rows.map(product => product.product_id);
+    const productIds = result.rows.map((product) => product.product_id);
     let categoriesMap = {};
     if (productIds.length > 0) {
       const categoriesResult = await pool.query(
@@ -686,14 +742,17 @@ exports.searchProducts = async (req, res) => {
         [productIds]
       );
       // Map product_id to array of categories
-      categoriesResult.rows.forEach(row => {
+      categoriesResult.rows.forEach((row) => {
         if (!categoriesMap[row.product_id]) categoriesMap[row.product_id] = [];
-        categoriesMap[row.product_id].push({ category_id: row.category_id, name: row.name });
+        categoriesMap[row.product_id].push({
+          category_id: row.category_id,
+          name: row.name,
+        });
       });
     }
-    
+
     // Transform the data to match the frontend's expected format
-    const products = result.rows.map(product => {
+    const products = result.rows.map((product) => {
       const categories = categoriesMap[product.product_id] || [];
       return {
         product_id: product.product_id,
@@ -703,31 +762,34 @@ exports.searchProducts = async (req, res) => {
         price: parseFloat(product.price),
         stock: parseInt(product.stock),
         img_path: product.img_path,
-        brand: product.brand || 'Unknown Brand', // store name as brand
+        brand: product.brand || "Unknown Brand", // store name as brand
         categories: categories, // array of {category_id, name}
-        category: categories.length > 0 ? categories[0].name.toLowerCase() : 'uncategorized', // first category name in lowercase
+        category:
+          categories.length > 0
+            ? categories[0].name.toLowerCase()
+            : "uncategorized", // first category name in lowercase
         rating: parseFloat(product.avg_rating) || 0, // real rating from reviews
         total_sold: parseInt(product.total_sold) || 0, // total units sold
-        visible: product.visible_status
+        visible: product.visible_status,
       };
     });
-    
-    res.json({ 
+
+    res.json({
       products,
       query: query,
-      count: products.length 
+      count: products.length,
     });
   } catch (error) {
-    console.error('Error searching products:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error searching products:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 // Debug function to check products and categories
 exports.debugProductCategories = async (req, res) => {
   try {
-    console.log('Debug: Checking products and categories...');
-    
+    console.log("Debug: Checking products and categories...");
+
     // Get all products with their categories
     const result = await pool.query(`
       SELECT 
@@ -741,7 +803,7 @@ exports.debugProductCategories = async (req, res) => {
       LEFT JOIN Categories c ON pc.category_id = c.category_id
       ORDER BY p.product_id
     `);
-    
+
     // Get products without any categories
     const orphanProducts = await pool.query(`
       SELECT p.product_id, p.name
@@ -749,23 +811,25 @@ exports.debugProductCategories = async (req, res) => {
       LEFT JOIN Product_categories pc ON p.product_id = pc.product_id
       WHERE pc.product_id IS NULL AND p.visible = true
     `);
-    
+
     // Get all categories
-    const categories = await pool.query('SELECT * FROM Categories ORDER BY name');
-    
+    const categories = await pool.query(
+      "SELECT * FROM Categories ORDER BY name"
+    );
+
     res.json({
-      message: 'Debug information',
+      message: "Debug information",
       products_with_categories: result.rows,
       orphan_products: orphanProducts.rows,
       all_categories: categories.rows,
       stats: {
         total_products: result.rows.length,
         orphan_products_count: orphanProducts.rows.length,
-        total_categories: categories.rows.length
-      }
+        total_categories: categories.rows.length,
+      },
     });
   } catch (error) {
-    console.error('Debug error:', error);
-    res.status(500).json({ message: 'Debug error', error: error.message });
+    console.error("Debug error:", error);
+    res.status(500).json({ message: "Debug error", error: error.message });
   }
 };
