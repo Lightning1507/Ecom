@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiSearch, FiFilter, FiPackage, FiTruck, FiCheck, FiX } from 'react-icons/fi';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import './SellerOrders.css';
 
 const OrderStatusBadge = ({ status }) => {
@@ -34,7 +35,8 @@ const SellerOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
-
+  useScrollToTop();
+  
   // Helper function to get authentication token
   const getAuthToken = () => {
     try {

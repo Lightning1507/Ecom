@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ProductReviews from './ProductReviews';
 import './ProductDetail.css';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  useScrollToTop();
   useEffect(() => {
     const fetchProduct = async () => {
       try {

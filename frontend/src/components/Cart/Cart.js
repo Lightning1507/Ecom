@@ -4,6 +4,8 @@ import { FiShoppingCart, FiPlus, FiMinus, FiTrash2, FiShoppingBag, FiCheck } fro
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { CartContext } from '../../context/CartContext';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
+
 import './Cart.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -20,7 +22,7 @@ const Cart = () => {
   const { user, isAuthenticated } = useContext(AuthContext);
   const { refreshCartCount } = useContext(CartContext);
   const navigate = useNavigate();
-
+  useScrollToTop();
   // Helper function to get Cloudinary URL
   const getCloudinaryUrl = (imagePath) => {
     if (!imagePath) {

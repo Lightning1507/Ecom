@@ -2,36 +2,36 @@ const { Pool } = require("pg");
 const pool = require("../db");
 
 // Debug: Kiểm tra import cloudinary
-console.log("=== DEBUG CLOUDINARY IMPORT ===");
+// console.log("=== DEBUG CLOUDINARY IMPORT ===");
 let uploadToCloudinary, deleteFromCloudinary;
 
 try {
   const cloudinaryModule = require("../utils/cloudinary");
-  console.log("Cloudinary module loaded successfully");
-  console.log("Exports from cloudinary:", Object.keys(cloudinaryModule));
+  // console.log("Cloudinary module loaded successfully");
+  // console.log("Exports from cloudinary:", Object.keys(cloudinaryModule));
 
   uploadToCloudinary = cloudinaryModule.uploadToCloudinary;
   deleteFromCloudinary = cloudinaryModule.deleteFromCloudinary;
 
-  console.log("uploadToCloudinary type:", typeof uploadToCloudinary);
-  console.log("deleteFromCloudinary type:", typeof deleteFromCloudinary);
+  // console.log("uploadToCloudinary type:", typeof uploadToCloudinary);
+  // console.log("deleteFromCloudinary type:", typeof deleteFromCloudinary);
 
   if (typeof uploadToCloudinary !== "function") {
     throw new Error("uploadToCloudinary is not a function");
   }
 } catch (error) {
-  console.error("ERROR importing cloudinary functions:", error.message);
+  // console.error("ERROR importing cloudinary functions:", error.message);
   // Fallback: tạo hàm tạm thời
   uploadToCloudinary = async (filePath) => {
-    console.log("Using fallback upload function for:", filePath);
+    // console.log("Using fallback upload function for:", filePath);
     return { url: "/fallback-image.jpg", public_id: "fallback" };
   };
   deleteFromCloudinary = async (publicId) => {
-    console.log("Using fallback delete function for:", publicId);
+    // console.log("Using fallback delete function for:", publicId);
     return { result: "ok" };
   };
 }
-console.log("=== END DEBUG ===");
+// console.log("=== END DEBUG ===");
 
 // const {Pool} = require('pg');
 // const pool = require('../db');

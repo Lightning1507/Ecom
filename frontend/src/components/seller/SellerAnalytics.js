@@ -16,6 +16,8 @@ import {
 } from 'recharts';
 import { FiTrendingUp, FiTrendingDown, FiDollarSign, FiShoppingBag, FiUsers, FiCalendar, FiLoader } from 'react-icons/fi';
 import './SellerAnalytics.css';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
+
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -34,7 +36,8 @@ const SellerAnalytics = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  useScrollToTop();
+  
   // Helper function to get authentication token
   const getAuthToken = useCallback(() => {
     try {

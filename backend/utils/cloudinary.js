@@ -1,7 +1,7 @@
-const cloudinary = require('cloudinary').v2;
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
+const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 
 // Configure Cloudinary
 cloudinary.config({
@@ -11,7 +11,7 @@ cloudinary.config({
 });
 
 // Tạo thư mục uploads nếu chưa tồn tại
-const uploadDir = 'uploads/products/';
+const uploadDir = "uploads/products/";
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -22,49 +22,64 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
-  }
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, "product-" + uniqueSuffix + path.extname(file.originalname));
+  },
 });
 
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 5 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedMimes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/avif",
+    ];
+
+    if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(
+        new Error(
+          "Only image files (JPEG, JPG, PNG, GIF, WEBP, AVIF) are allowed!"
+        ),
+        false
+      );
     }
-  }
+  },
 });
 
 // Hàm upload file từ đường dẫn lên Cloudinary
 const uploadToCloudinary = async (filePath) => {
   try {
-    console.log('Uploading file to Cloudinary from path:', filePath);
-    
+    console.log("Uploading file to Cloudinary from path:", filePath);
+
     if (!fs.existsSync(filePath)) {
-      throw new Error('File not found: ' + filePath);
+      throw new Error("File not found: " + filePath);
     }
 
     const result = await cloudinary.uploader.upload(filePath, {
-      folder: 'ecommerce/products',
-      resource_type: 'image',
+      folder: "ecommerce/products",
+      resource_type: "image",
+      allowed_formats: ["jpg", "jpeg", "png", "gif", "webp", "avif"],
       transformation: [
         {
           width: 800,
           height: 800,
-           crop: 'fill', 
-          gravity: 'auto', 
-          quality: 'auto:good'
-        }
-      ]
+          crop: "fill",
+          gravity: "auto",
+          quality: "auto:good",
+        },
+      ],
     });
 
-    console.log('Cloudinary upload successful:', result.secure_url);
+    console.log("Cloudinary upload successful:", result.secure_url);
 
     // Xóa file tạm sau khi upload thành công
     if (fs.existsSync(filePath)) {
@@ -73,10 +88,10 @@ const uploadToCloudinary = async (filePath) => {
 
     return {
       url: result.secure_url,
-      public_id: result.public_id
+      public_id: result.public_id,
     };
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error("Cloudinary upload error:", error);
     // Xóa file tạm nếu có lỗi
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -91,28 +106,28 @@ const uploadToCloudinary = async (filePath) => {
  * @returns {string|null} - Public ID or null if not a valid Cloudinary URL
  */
 const extractPublicId = (imageUrl) => {
-  if (!imageUrl || typeof imageUrl !== 'string') {
+  if (!imageUrl || typeof imageUrl !== "string") {
     return null;
   }
 
   try {
     // Check if it's a Cloudinary URL
-    if (!imageUrl.includes('cloudinary.com')) {
+    if (!imageUrl.includes("cloudinary.com")) {
       return null;
     }
 
     // Extract public ID from URL
     // URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/filename.ext
-    const parts = imageUrl.split('/');
-    const uploadIndex = parts.indexOf('upload');
-    
+    const parts = imageUrl.split("/");
+    const uploadIndex = parts.indexOf("upload");
+
     if (uploadIndex === -1 || uploadIndex >= parts.length - 1) {
       return null;
     }
 
     // Get everything after upload/ (skip version if present)
     let pathParts = parts.slice(uploadIndex + 1);
-    
+
     // Remove version if present (starts with 'v' followed by numbers)
     if (pathParts[0] && /^v\d+$/.test(pathParts[0])) {
       pathParts = pathParts.slice(1);
@@ -123,16 +138,16 @@ const extractPublicId = (imageUrl) => {
     }
 
     // Join the remaining parts and remove file extension
-    const publicIdWithExt = pathParts.join('/');
-    const lastDotIndex = publicIdWithExt.lastIndexOf('.');
-    
+    const publicIdWithExt = pathParts.join("/");
+    const lastDotIndex = publicIdWithExt.lastIndexOf(".");
+
     if (lastDotIndex > 0) {
       return publicIdWithExt.substring(0, lastDotIndex);
     }
 
     return publicIdWithExt;
   } catch (error) {
-    console.error('Error extracting public ID from URL:', error);
+    console.error("Error extracting public ID from URL:", error);
     return null;
   }
 };
@@ -149,9 +164,9 @@ const deleteImage = async (imageUrl) => {
     }
 
     let publicId;
-    
+
     // If it's a full URL, extract public ID
-    if (imageUrl.includes('cloudinary.com')) {
+    if (imageUrl.includes("cloudinary.com")) {
       publicId = extractPublicId(imageUrl);
     } else {
       // Assume it's already a public ID
@@ -159,20 +174,20 @@ const deleteImage = async (imageUrl) => {
     }
 
     if (!publicId) {
-      console.warn('Could not extract public ID from:', imageUrl);
+      console.warn("Could not extract public ID from:", imageUrl);
       return false;
     }
 
     const result = await cloudinary.uploader.destroy(publicId);
-    
-    if (result.result === 'ok' || result.result === 'not found') {
+
+    if (result.result === "ok" || result.result === "not found") {
       return true;
     }
 
-    console.warn('Cloudinary delete result:', result);
+    console.warn("Cloudinary delete result:", result);
     return false;
   } catch (error) {
-    console.error('Error deleting image from Cloudinary:', error);
+    console.error("Error deleting image from Cloudinary:", error);
     return false;
   }
 };
@@ -191,12 +206,12 @@ const deleteImages = async (imageUrls) => {
       return true;
     }
 
-    const deletePromises = imageUrls.map(url => deleteImage(url));
+    const deletePromises = imageUrls.map((url) => deleteImage(url));
     const results = await Promise.all(deletePromises);
-    
-    return results.every(result => result === true);
+
+    return results.every((result) => result === true);
   } catch (error) {
-    console.error('Error deleting multiple images:', error);
+    console.error("Error deleting multiple images:", error);
     return false;
   }
 };
@@ -208,5 +223,5 @@ module.exports = {
   deleteFromCloudinary,
   extractPublicId,
   deleteImage,
-  deleteImages
+  deleteImages,
 };

@@ -1,6 +1,5 @@
 const pool = require('../db');
-const { upload } = require('../config/cloudinary');
-const { deleteImage } = require('../utils/cloudinary');
+const { deleteImage, uploadToCloudinary} = require('../utils/cloudinary');
 
 // Get customer's completed orders with reviewable products
 exports.getCompletedOrders = async (req, res) => {
@@ -93,7 +92,7 @@ exports.submitReview = async (req, res) => {
   try {
     const userId = req.user.id;
     const { orderId, productId, rating, comment } = req.body;
-    const imageUrl = req.file ? req.file.path : null;
+    let imageUrl = null;
 
     if (!orderId || !productId || !rating) {
       return res.status(400).json({
@@ -136,6 +135,20 @@ exports.submitReview = async (req, res) => {
       });
     }
 
+    // Upload ảnh lên Cloudinary nếu có
+    if (req.file) {
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.path);
+        imageUrl = uploadResult.url;
+      } catch (uploadError) {
+        console.error('Error uploading review image:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload review image'
+        });
+      }
+    }
+
     const insertResult = await pool.query(`
       INSERT INTO Reviews (order_id, product_id, user_id, rating, comment, img_path)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -164,13 +177,14 @@ exports.submitReview = async (req, res) => {
   }
 };
 
+
 // Update an existing review
 exports.updateReview = async (req, res) => {
   try {
     const userId = req.user.id;
     const { reviewId } = req.params;
     const { rating, comment } = req.body;
-    const imageUrl = req.file ? req.file.path : null;
+    let imageUrl = null;
 
     if (rating) {
       const ratingNum = parseInt(rating);
@@ -195,6 +209,20 @@ exports.updateReview = async (req, res) => {
     }
 
     const currentImageUrl = reviewCheck.rows[0].img_path;
+
+    // Upload ảnh mới lên Cloudinary nếu có
+    if (req.file) {
+      try {
+        const uploadResult = await uploadToCloudinary(req.file.path);
+        imageUrl = uploadResult.url;
+      } catch (uploadError) {
+        console.error('Error uploading review image:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload review image'
+        });
+      }
+    }
 
     let updateFields = [];
     let params = [];
@@ -236,11 +264,12 @@ exports.updateReview = async (req, res) => {
     const updateResult = await pool.query(updateQuery, params);
     const updatedReview = updateResult.rows[0];
 
+    // Xóa ảnh cũ khỏi Cloudinary nếu có ảnh mới
     if (imageUrl && currentImageUrl && currentImageUrl !== imageUrl) {
       try {
         await deleteImage(currentImageUrl);
       } catch (error) {
-        console.error('Failed to delete old review image:', error);
+        console.error('Failed to delete old review image from Cloudinary:', error);
       }
     }
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FiDollarSign, FiShoppingCart, FiPackage, FiTrendingUp } from 'react-icons/fi';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useScrollToTop } from '../../../hooks/useScrollToTop';
+
 import './styles.css';
 
 // Helper function to format VND currency
@@ -41,6 +43,7 @@ const SellerDashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  useScrollToTop();
 
   // Helper function to get authentication token
   const getAuthToken = () => {

@@ -9,6 +9,7 @@ import {
   FiList,
   FiTrendingUp
 } from 'react-icons/fi';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import './Shops.css';
 
 const Shops = () => {
@@ -24,7 +25,7 @@ const Shops = () => {
   const [totalShops, setTotalShops] = useState(0);
   const [shopsPerPage] = useState(9);
   const [loadingMore, setLoadingMore] = useState(false);
-
+  useScrollToTop();
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   // Debounce search to avoid too many API calls

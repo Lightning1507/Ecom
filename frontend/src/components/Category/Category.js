@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { FiGrid, FiList, FiFilter, FiChevronDown } from 'react-icons/fi';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import './Category.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -118,7 +119,7 @@ const Category = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  useScrollToTop();
   // Fetch categories from API
   useEffect(() => {
     const fetchCategories = async () => {

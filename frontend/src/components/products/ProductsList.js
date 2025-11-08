@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { FiStar, FiShoppingCart } from 'react-icons/fi';
 import ProductFilter from './ProductFilter';
 import { useCart } from '../../hooks/useCart';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import './ProductsList.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -15,7 +16,7 @@ const ProductsList = () => {
   const searchQuery = searchParams.get('search') || '';
   const sellerFilter = searchParams.get('seller') || '';
   const navigate = useNavigate();
-  
+  useScrollToTop();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     category: 'all', // Will be set after fetching category name
@@ -162,7 +163,7 @@ const ProductsList = () => {
   }, [sellerFilter]);
 
   // Fetch products with pagination
-  const fetchProducts = async (page = 1, append = false) => {
+   const fetchProducts = useCallback(async (page = 1, append = false) => {
     try {
       if (append) {
         setLoadingMore(true);
@@ -230,11 +231,11 @@ const ProductsList = () => {
         img_path: getCloudinaryUrl(product.img_path),
         stock: parseInt(product.stock, 10) || 0,
         rating: product.rating || 0,
-        total_sold: parseInt(product.total_sold, 10) || 0, // Include total sold count
-        category: product.category || 'uncategorized', // Include category from API
-        brand: product.brand || 'Unknown Brand', // Include brand from API
-        categories: product.categories || [], // Include full categories array
-        seller_id: product.seller_id // Include seller_id for filtering
+        total_sold: parseInt(product.total_sold, 10) || 0,
+        category: product.category || 'uncategorized',
+        brand: product.brand || 'Unknown Brand',
+        categories: product.categories || [],
+        seller_id: product.seller_id
       }));
 
       if (append) {
@@ -255,11 +256,11 @@ const ProductsList = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [productsPerPage]); 
 
   useEffect(() => {
     fetchProducts(1);
-  }, []);
+  }, [fetchProducts]); 
 
   // Trigger animation when filters change
   useEffect(() => {

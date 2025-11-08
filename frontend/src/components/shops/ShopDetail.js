@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { 
   FiStar, 
   FiShoppingBag, 
@@ -20,7 +21,7 @@ const ShopDetail = () => {
   const [shop, setShop] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  useScrollToTop();
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
   const CLOUDINARY_CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
 

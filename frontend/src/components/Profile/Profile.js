@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FiEdit2, FiUser, FiMail, FiPhone, FiMapPin, FiShield } from 'react-icons/fi';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import './Profile.css';
 
 const Profile = () => {
@@ -18,7 +19,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-
+  useScrollToTop();
   // Helper function to get authentication token
   const getAuthToken = () => {
     try {

@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import './Auth.css';
 
 const Register = () => {
@@ -20,7 +21,7 @@ const Register = () => {
   
   const { register } = useContext(AuthContext);
   const navigate = useNavigate();
-
+  useScrollToTop();
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({

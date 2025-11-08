@@ -1,60 +1,60 @@
 # 🛒 E-Commerce Platform
 
-Một nền tảng thương mại điện tử đầy đủ tính năng được xây dựng với React và Node.js, hỗ trợ đa vai trò người dùng bao gồm khách hàng, người bán, quản trị viên và đơn vị vận chuyển.
+A full-featured e-commerce platform built with React and Node.js, supporting multiple user roles including customers, sellers, administrators, and shippers.
 
-## 📋 Mục lục
+## 📋 Table of Contents
 
-- [Tính năng chính](#tính-năng-chính)
-- [Công nghệ sử dụng](#công-nghệ-sử-dụng)
-- [Cấu trúc dự án](#cấu-trúc-dự-án)
-- [Cài đặt](#cài-đặt)
-- [Cách chạy dự án](#cách-chạy-dự-án)
-- [Vai trò người dùng](#vai-trò-người-dùng)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Running the Project](#running-the-project)
+- [User Roles](#user-roles)
 - [API Endpoints](#api-endpoints)
 - [Database Schema](#database-schema)
-- [Đóng góp](#đóng-góp)
+- [Contributing](#contributing)
 
-## ✨ Tính năng chính
+## ✨ Key Features
 
-### 🛍️ Khách hàng (Customer)
-- Đăng ký/Đăng nhập tài khoản
-- Duyệt và tìm kiếm sản phẩm
-- Thêm sản phẩm vào giỏ hàng
-- Thanh toán đơn hàng
-- Theo dõi trạng thái đơn hàng
-- Đánh giá và nhận xét sản phẩm
-- Quản lý hồ sơ cá nhân
+### 🛍️ Customer
+- Register/Login
+- Browse and search products
+- Add products to cart
+- Checkout
+- Track order status
+- Rate and review products
+- Manage personal profile
 
-### 🏪 Người bán (Seller)
-- Dashboard quản lý bán hàng
-- Thêm/Chỉnh sửa/Xóa sản phẩm
-- Quản lý kho hàng
-- Xử lý đơn hàng
-- Xem báo cáo thống kê
-- Quản lý cửa hàng
+### 🏪 Seller
+- Sales management dashboard
+- Add/Edit/Delete products
+- Inventory management
+- Process orders
+- View statistical reports
+- Store management
 
-### 👨‍💼 Quản trị viên (Admin)
-- Dashboard tổng quan hệ thống
-- Quản lý người dùng
-- Quản lý người bán
-- Quản lý đơn hàng
-- Thống kê và báo cáo
-- Quản lý danh mục sản phẩm
-- Quản lý đánh giá
+### 👨‍💼 Admin
+- System overview dashboard
+- User management
+- Seller management
+- Order management
+- Statistics and reports
+- Product category management
+- Review management
 
-### 🚚 Đơn vị vận chuyển (Shipper)
-- Dashboard vận chuyển
-- Quản lý đơn hàng giao
-- Cập nhật trạng thái giao hàng
-- Lập kế hoạch tuyến đường
-- Thống kê giao hàng
+### 🚚 Shipper
+- Shipping dashboard
+- Manage assigned orders
+- Update delivery status
+- Route planning
+- Delivery statistics
 
-## 🛠️ Công nghệ sử dụng
+## 🛠️ Tech Stack
 
 ### Frontend
-- **React 18** - Thư viện UI
-- **React Router DOM** - Định tuyến
-- **Chart.js & Recharts** - Biểu đồ thống kê
+- **React 18** - UI Library
+- **React Router DOM** - Routing
+- **Chart.js & Recharts** - Charts
 - **Framer Motion** - Animation
 - **React Icons** - Icon set
 - **CSS3** - Styling
@@ -62,11 +62,11 @@ Một nền tảng thương mại điện tử đầy đủ tính năng được
 ### Backend
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
-- **PostgreSQL** - Cơ sở dữ liệu
-- **JWT** - Xác thực
-- **bcryptjs** - Mã hóa mật khẩu
-- **Multer** - Upload file
-- **Cloudinary** - Lưu trữ hình ảnh
+- **PostgreSQL** - Database
+- **JWT** - Authentication
+- **bcryptjs** - Password hashing
+- **Multer** - File upload
+- **Cloudinary** - Image storage
 - **CORS** - Cross-origin resource sharing
 
 ### DevOps & Tools
@@ -74,16 +74,16 @@ Một nền tảng thương mại điện tử đầy đủ tính năng được
 - **CRACO** - Create React App Configuration Override
 - **dotenv** - Environment variables
 
-## 📁 Cấu trúc dự án
+## 📁 Project Structure
 
 ```
 Ecom/
 ├── backend/                 # Node.js API server
-│   ├── config/             # Cấu hình
-│   ├── controllers/        # Controllers xử lý logic
-│   ├── middleware/         # Middleware xác thực
+│   ├── config/             # Config   
+│   ├── controllers/        # Controllers (business logic)
+│   ├── middleware/         # Auth Middleware
 │   ├── routes/            # API routes
-│   ├── utils/             # Tiện ích
+│   ├── utils/             # Utilities
 │   ├── database.sql       # Database schema
 │   └── index.js           # Entry point
 │
@@ -101,15 +101,15 @@ Ecom/
 │   │   └── router.js      # Routing configuration
 │   └── public/            # Static assets
 │
-└── README.md              # Tài liệu dự án
+└── README.md              # Project documentation
 ```
 
-## ⚙️ Cài đặt
+## ⚙️ Installation
 
-### Yêu cầu hệ thống
+### Prerequisites
 - Node.js >= 14.x
 - PostgreSQL >= 12.x
-- npm hoặc yarn
+- npm or yarn
 
 ### 1. Clone repository
 ```bash
@@ -117,36 +117,36 @@ git clone <repository-url>
 cd Ecom
 ```
 
-### 2. Cài đặt dependencies
+### 2. Install dependencies
 ```bash
-# Cài đặt root dependencies
+# Install root dependencies
 npm install
 
-# Cài đặt backend dependencies
+# Install backend dependencies
 cd backend
 npm install
 
-# Cài đặt frontend dependencies
+# Install frontend dependencies
 cd ../frontend
 npm install
 ```
 
-### 3. Cấu hình Database
+### 3. Database Setup
 ```bash
-# Tạo database PostgreSQL
+# Create PostgreSQL database
 createdb ecommerce_db
 
 # Import database schema
 psql -d ecommerce_db -f backend/database.sql
 
-# (Tùy chọn) Import dữ liệu mẫu
+# (Optional) Import mock data
 psql -d ecommerce_db -f backend/mock_data.sql
 ```
 
 ### 4. Cấu hình Environment Variables
 
 #### Backend Environment
-Tạo file `.env` trong thư mục `backend/`:
+Create a `.env` file in the `backend/` directory:
 ```env
 PORT=5000
 DB_HOST=localhost
@@ -163,7 +163,7 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 #### Frontend Environment
-Tạo file `.env` trong thư mục `frontend/`:
+Create a `.env` file in the `frontend/` directory:
 ```env
 REACT_APP_API_URL=http://localhost:5000
 REACT_APP_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
@@ -171,22 +171,22 @@ REACT_APP_CLOUDINARY_API_KEY=your_cloudinary_api_key
 REACT_APP_CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
-## 🚀 Cách chạy dự án
+## 🚀 Running the Project
 
 ### Development mode
 
-#### Chạy Backend
+#### Run Backend
 ```bash
 cd backend
 npm run dev
-# Server chạy tại: http://localhost:5000
+# Server runs at: http://localhost:5000
 ```
 
-#### Chạy Frontend
+#### Run Frontend
 ```bash
 cd frontend
 npm start
-# Client chạy tại: http://localhost:3000
+# Client runs at: http://localhost:3000
 ```
 
 ### Production mode
@@ -197,91 +197,91 @@ cd frontend
 npm run build
 ```
 
-#### Chạy Backend
+#### Run Backend
 ```bash
 cd backend
 npm start
 ```
 
-## 👥 Vai trò người dùng
+## 👥 User Roles
 
 ### Quyền truy cập theo vai trò:
 
-| Tính năng | Customer | Seller | Admin | Shipper |
+| Feature | Customer | Seller | Admin | Shipper |
 |-----------|----------|--------|-------|---------|
-| Mua hàng | ✅ | ✅ | ✅ | ✅ |
-| Bán hàng | ❌ | ✅ | ❌ | ❌ |
-| Quản lý hệ thống | ❌ | ❌ | ✅ | ❌ |
-| Giao hàng | ❌ | ❌ | ❌ | ✅ |
-| Xem thống kê | ❌ | ✅ | ✅ | ✅ |
+| Purchasing | ✅ | ✅ | ✅ | ✅ |
+| Selling | ❌ | ✅ | ❌ | ❌ |
+| System Management | ❌ | ❌ | ✅ | ❌ |
+| Shipping | ❌ | ❌ | ❌ | ✅ |
+| View Statistics | ❌ | ✅ | ✅ | ✅ |
 
 ## 📡 API Endpoints
 
 ### Authentication
-- `POST /api/users/login` - Đăng nhập
-- `POST /api/users/register` - Đăng ký
+- `POST /api/users/login` - Login
+- `POST /api/users/register` - Register
 
 ### Products
-- `GET /api/products` - Lấy danh sách sản phẩm
-- `POST /api/products` - Thêm sản phẩm (Seller)
-- `PUT /api/products/:id` - Cập nhật sản phẩm (Seller)
-- `DELETE /api/products/:id` - Xóa sản phẩm (Seller)
+- `GET /api/products` - Get products
+- `POST /api/products` - Add product (Seller)
+- `PUT /api/products/:id` - Update product (Seller)
+- `DELETE /api/products/:id` - Delete product (Seller)
 
 ### Orders
-- `GET /api/orders` - Lấy đơn hàng
-- `POST /api/orders` - Tạo đơn hàng
-- `PUT /api/orders/:id/status` - Cập nhật trạng thái đơn hàng
+- `GET /api/orders` - Get orders
+- `POST /api/orders` - Create order
+- `PUT /api/orders/:id/status` - Update order status
 
 ### Cart
-- `GET /api/cart` - Lấy giỏ hàng
-- `POST /api/cart` - Thêm vào giỏ hàng
-- `PUT /api/cart/:id` - Cập nhật giỏ hàng
-- `DELETE /api/cart/:id` - Xóa khỏi giỏ hàng
+- `GET /api/cart` - Get cart
+- `POST /api/cart` - Add to cart
+- `PUT /api/cart/:id` - Update cart
+- `DELETE /api/cart/:id` - Remove from cart
 
 ### Admin
-- `GET /api/admin/dashboard` - Dashboard admin
-- `GET /api/admin/users` - Quản lý người dùng
-- `GET /api/admin/sellers` - Quản lý người bán
+- `GET /api/admin/dashboard` - Admin dashboard
+- `GET /api/admin/users` - Manage users
+- `GET /api/admin/sellers` - Manage sellers
 
 ### Shipper
-- `GET /api/shipper/dashboard` - Dashboard shipper
-- `GET /api/shipper/orders` - Đơn hàng cần giao
-- `PUT /api/shipper/orders/:id/status` - Cập nhật trạng thái giao hàng
+- `GET /api/shipper/dashboard` - Shipper dashboard
+- `GET /api/shipper/orders` - Orders to deliver
+- `PUT /api/shipper/orders/:id/status` - Update delivery status
 
 ## 🗄️ Database Schema
 
 ### Bảng chính:
-- **Users** - Thông tin người dùng (tất cả vai trò)
-- **Sellers** - Thông tin người bán
-- **Shipping_units** - Thông tin đơn vị vận chuyển
-- **Admins** - Thông tin quản trị viên
-- **Products** - Sản phẩm
-- **Categories** - Danh mục sản phẩm
-- **Orders** - Đơn hàng
-- **Order_items** - Chi tiết đơn hàng
-- **Carts** - Giỏ hàng
-- **Cart_items** - Chi tiết giỏ hàng
-- **Payments** - Thanh toán
-- **Reviews** - Đánh giá sản phẩm
+- **Users** - User information (all roles)
+- **Sellers** - Seller information
+- **Shipping_units** - Shipper unit information
+- **Admins** - Admin information
+- **Products** - Products
+- **Categories** - Product categories
+- **Orders** - Orders
+- **Order_items** - Order items
+- **Carts** - Carts
+- **Cart_items** - Cart items
+- **Payments** - Payments
+- **Reviews** - Product reviews
 
 ## 🎨 Screenshots
 
 ## 🔧 Troubleshooting
 
-### Lỗi thường gặp:
+### Common Issues:
 
 #### 1. Database connection error
 ```bash
-# Kiểm tra PostgreSQL đã chạy chưa
+# Check if PostgreSQL is running
 sudo service postgresql status
 
-# Khởi động PostgreSQL
+# Start PostgreSQL
 sudo service postgresql start
 ```
 
-#### 2. Port đã được sử dụng
+#### 2. Port already in use
 ```bash
-# Tìm process đang sử dụng port
+# Find process using port
 lsof -i :5000
 lsof -i :3000
 
@@ -291,29 +291,29 @@ kill -9 <PID>
 
 #### 3. Module not found
 ```bash
-# Xóa node_modules và cài đặt lại
+# Delete node_modules and reinstall
 rm -rf node_modules package-lock.json
 npm install
 ```
 
 ## 🤝 Đóng góp
 
-1. Fork dự án
-2. Tạo branch cho feature (`git checkout -b feature/AmazingFeature`)
-3. Commit thay đổi (`git commit -m 'Add some AmazingFeature'`)
-4. Push lên branch (`git push origin feature/AmazingFeature`)
-5. Tạo Pull Request
+1. Fork the project
+2. Create your feature branch (git checkout -b feature/AmazingFeature)
+3. Commit your changes (git commit -m 'Add some AmazingFeature')
+4. Push to the branch (git push origin feature/AmazingFeature)
+5. Open a Pull Request
 
 
-## 📞 Liên hệ
+## 📞 Contact
 
-- **Developer**: Đặng Hoàng Quân
+- **Developer**: Dang Hoang Quan
 - **Email**: [lightning1575@gmail.com]
 - **GitHub**: [https://github.com/Lightning1507]
 
-## 🙏 Lời cảm ơn
+## 🙏 Acknowledgements
 
-- Xin cảm ơn cô Nguyễn Thị Oanh đã hướng dẫn bọn em trong quá trình xây dựng cơ sở dữ liệu đảm bảo tính toàn vẹn.
-- Cảm ơn các thư viện mã nguồn mở đã được sử dụng trong dự án.
+- Thank you to Ms. Nguyen Thi Oanh for guiding me in building a database with integrity.
+- Thank you to the open-source libraries used in this project.
 
 ---

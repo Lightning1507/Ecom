@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FiUser, FiShoppingBag, FiBell, FiCreditCard, FiTruck, FiSave } from 'react-icons/fi';
 import './SellerSettings.css';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
+
 
 const SellerSettings = () => {
   const [settings, setSettings] = useState({
@@ -40,7 +42,8 @@ const SellerSettings = () => {
   const [formData, setFormData] = useState(settings);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  useScrollToTop();
+  
   // Helper function to get authentication token
   const getAuthToken = () => {
     try {
