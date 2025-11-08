@@ -78,16 +78,16 @@ A full-featured e-commerce platform built with React and Node.js, supporting mul
 
 ```
 Ecom/
-├── backend/                 # Node.js API server
-│   ├── config/             # Config   
-│   ├── controllers/        # Controllers (business logic)
-│   ├── middleware/         # Auth Middleware
+├── backend/               # Node.js API server
+│   ├── config/            # Config   
+│   ├── controllers/       # Controllers (business logic)
+│   ├── middleware/        # Auth Middleware
 │   ├── routes/            # API routes
 │   ├── utils/             # Utilities
 │   ├── database.sql       # Database schema
 │   └── index.js           # Entry point
 │
-├── frontend/               # React frontend
+├── frontend/              # React frontend
 │   ├── src/
 │   │   ├── components/    # React components
 │   │   │   ├── admin/     # Admin components
@@ -143,7 +143,7 @@ psql -d ecommerce_db -f backend/database.sql
 psql -d ecommerce_db -f backend/mock_data.sql
 ```
 
-### 4. Cấu hình Environment Variables
+### 4. Configure Environment Variables
 
 #### Backend Environment
 Create a `.env` file in the `backend/` directory:
@@ -205,7 +205,7 @@ npm start
 
 ## 👥 User Roles
 
-### Quyền truy cập theo vai trò:
+### Role-based access control:
 
 | Feature | Customer | Seller | Admin | Shipper |
 |-----------|----------|--------|-------|---------|
@@ -250,7 +250,7 @@ npm start
 
 ## 🗄️ Database Schema
 
-### Bảng chính:
+### Main Tables:
 - **Users** - User information (all roles)
 - **Sellers** - Seller information
 - **Shipping_units** - Shipper unit information
@@ -296,7 +296,7 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-## 🤝 Đóng góp
+## 🤝 Contributing
 
 1. Fork the project
 2. Create your feature branch (git checkout -b feature/AmazingFeature)
